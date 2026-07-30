@@ -5,43 +5,37 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SANRENTAN -Nelo Edition-</title>
 <link rel="stylesheet" href="style.css">
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 <div id="app">
 
-  <!-- 1. タイトル画面 -->
+  <!-- 1. タイトル -->
   <div id="screen-title" class="screen active">
     <div class="title-card">
       <div class="color-bar">
-        <span style="background:#333"></span>
-        <span style="background:#fff;border:1px solid #ccc"></span>
-        <span style="background:#E53935"></span>
-        <span style="background:#1E88E5"></span>
-        <span style="background:#FDD835"></span>
-        <span style="background:#43A047"></span>
+        <span style="background:#333"></span><span style="background:#fff;border:1px solid #ccc"></span>
+        <span style="background:#E53935"></span><span style="background:#1E88E5"></span>
+        <span style="background:#FDD835"></span><span style="background:#43A047"></span>
         <span style="background:#FB8C00"></span>
       </div>
       <h1>SANRENTAN</h1>
       <p class="subtitle">PARTY RACE TICKET</p>
       <div class="divider-light"></div>
-      <p class="edition">-Nelo Edition- Online</p>
+      <p class="edition">-Nelo Edition-</p>
       <button id="btn-go-create" class="btn-accent">ルームを作成</button>
       <button id="btn-go-join" class="btn-ghost">ルームに参加</button>
     </div>
   </div>
 
-  <!-- 2. ルーム作成画面 -->
+  <!-- 2. ルーム作成 -->
   <div id="screen-create" class="screen">
     <div class="card">
       <h2>ルーム作成</h2>
       <input id="create-name" type="text" placeholder="あなたの名前" maxlength="10" class="input-field">
       <label class="round-label">ラウンド数
         <select id="create-rounds" class="input-field">
-          <option value="3">3</option>
-          <option value="5" selected>5</option>
-          <option value="7">7</option>
-          <option value="10">10</option>
+          <option value="3">3</option><option value="5" selected>5</option>
+          <option value="7">7</option><option value="10">10</option>
         </select>
       </label>
       <button id="btn-create-room" class="btn-primary">作成する</button>
@@ -50,7 +44,7 @@
     </div>
   </div>
 
-  <!-- 3. ルーム参加画面 -->
+  <!-- 3. ルーム参加 -->
   <div id="screen-join" class="screen">
     <div class="card">
       <h2>ルームに参加</h2>
@@ -62,7 +56,7 @@
     </div>
   </div>
 
-  <!-- 4. ロビー画面 -->
+  <!-- 4. ロビー -->
   <div id="screen-lobby" class="screen">
     <div class="card">
       <div class="room-code-display">
@@ -74,11 +68,11 @@
       <div id="lobby-host-controls" class="lobby-controls" style="display:none">
         <button id="btn-start-game" class="btn-primary" disabled>ゲームスタート</button>
       </div>
-      <p id="lobby-status" class="status-msg">ホストがゲームを開始するのを待っています...</p>
+      <p id="lobby-status" class="status-msg"></p>
     </div>
   </div>
 
-  <!-- 5. お題表示画面 -->
+  <!-- 5. お題表示 -->
   <div id="screen-topic" class="screen">
     <div class="topic-card">
       <div class="color-bar small">
@@ -89,7 +83,7 @@
       </div>
       <div class="topic-header">
         <span class="ticket-label">PARTY RACE TICKET</span>
-        <span id="round-badge" class="round-badge">第1R</span>
+        <span id="round-badge" class="round-badge"></span>
       </div>
       <h2 id="topic-question" class="topic-question"></h2>
       <div class="divider-dark"></div>
@@ -103,21 +97,21 @@
     <p id="topic-oya-label" class="oya-label"></p>
   </div>
 
-  <!-- 6. 選択画面（親/予想共用） -->
+  <!-- 6. 選択画面 -->
   <div id="screen-select" class="screen">
     <div class="card">
       <h2 id="select-title"></h2>
       <p id="select-hint" class="hint"></p>
       <div id="select-question" class="mini-question"></div>
       <div id="select-ranks" class="rank-display">
-        <div class="rank-slot" data-rank="1"><span class="rank-num">1位</span><span class="rank-val">？</span></div>
-        <div class="rank-slot" data-rank="2"><span class="rank-num">2位</span><span class="rank-val">？</span></div>
-        <div class="rank-slot" data-rank="3"><span class="rank-num">3位</span><span class="rank-val">？</span></div>
+        <div class="rank-slot"><span class="rank-num">1位</span><span class="rank-val">？</span></div>
+        <div class="rank-slot"><span class="rank-num">2位</span><span class="rank-val">？</span></div>
+        <div class="rank-slot"><span class="rank-num">3位</span><span class="rank-val">？</span></div>
       </div>
       <div id="select-choices" class="choice-list"></div>
       <div class="action-row">
-        <button id="btn-select-undo" class="btn-secondary" disabled>やり直し</button>
-        <button id="btn-select-confirm" class="btn-primary compact" disabled>確定</button>
+        <button id="btn-undo" class="btn-secondary" disabled>やり直し</button>
+        <button id="btn-confirm" class="btn-primary compact" disabled>確定</button>
       </div>
     </div>
   </div>
@@ -132,7 +126,7 @@
     </div>
   </div>
 
-  <!-- 8. 結果画面 -->
+  <!-- 8. 結果 -->
   <div id="screen-result" class="screen">
     <div class="card">
       <h2>結果発表</h2>
@@ -143,7 +137,7 @@
     </div>
   </div>
 
-  <!-- 9. 最終結果画面 -->
+  <!-- 9. 最終結果 -->
   <div id="screen-final" class="screen">
     <div class="card final-card">
       <div class="color-bar small">
@@ -156,16 +150,17 @@
       <div class="divider-dark"></div>
       <div id="final-ranking" class="final-ranking"></div>
       <div class="action-row col">
-        <button id="btn-play-again" class="btn-primary">もう一回遊ぶ</button>
+        <button id="btn-play-again" class="btn-primary" style="display:none">もう一回遊ぶ</button>
+        <button id="btn-back-lobby" class="btn-secondary" style="display:none">ロビーに戻る</button>
         <button id="btn-back-title" class="btn-link">タイトルに戻る</button>
       </div>
     </div>
   </div>
 
-  <!-- 接続エラー -->
+  <!-- エラー -->
   <div id="screen-error" class="screen">
     <div class="card center">
-      <h2>接続エラー</h2>
+      <h2>エラー</h2>
       <p id="error-message" class="hint"></p>
       <button class="btn-primary btn-back" data-to="title">タイトルに戻る</button>
     </div>

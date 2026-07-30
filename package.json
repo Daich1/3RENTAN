@@ -1,0 +1,5 @@
+{
+  "name": "sanrentan-nelo",
+  "private": true,
+  "engines": { "node": ">=18" }
+}

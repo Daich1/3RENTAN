@@ -1,4 +1,7 @@
-const { getRoom, joinRoom, processAction, buildView } = require('../../lib/store');
+// Single serverless function for all game operations.
+// All requests hit the same Lambda → in-memory state is shared.
+
+const { createRoom, getRoom, joinRoom, processAction, buildView } = require('../lib/store');
 
 module.exports = (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -6,36 +9,42 @@ module.exports = (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const code = (req.query.code || '').toUpperCase();
-
   // GET: poll state
   if (req.method === 'GET') {
-    const playerId = req.query.playerId;
-    const room = getRoom(code);
+    const { code, playerId } = req.query;
+    if (!code || !playerId) return res.status(400).json({ error: 'code and playerId required' });
+    const room = getRoom(code.toUpperCase());
     if (!room) return res.status(404).json({ error: 'ルームが見つかりません' });
-    if (!playerId) return res.status(400).json({ error: 'playerId required' });
     return res.status(200).json(buildView(room, playerId));
   }
 
-  // POST: join or action
+  // POST: actions
   if (req.method === 'POST') {
     const body = req.body || {};
     const { action } = body;
 
-    if (action === 'join') {
+    if (action === 'create') {
       const name = (body.name || '').trim();
       if (!name) return res.status(400).json({ error: '名前を入力してください' });
+      const result = createRoom(name, parseInt(body.rounds) || 5);
+      return res.status(200).json(result);
+    }
+
+    if (action === 'join') {
+      const code = (body.code || '').toUpperCase();
+      const name = (body.name || '').trim();
+      if (!code || !name) return res.status(400).json({ error: 'code and name required' });
       const result = joinRoom(code, name);
       if (result.error) return res.status(400).json(result);
-      // Return playerId + initial view
       const room = getRoom(code);
       return res.status(200).json({ playerId: result.playerId, view: buildView(room, result.playerId) });
     }
 
-    // Game actions
-    const { playerId, ...data } = body;
-    if (!playerId || !action) return res.status(400).json({ error: 'playerId and action required' });
-    const result = processAction(code, playerId, action, data);
+    // Game actions: start, submit_oya, submit_predict, next_round, play_again, back_to_lobby
+    const code = (body.code || '').toUpperCase();
+    const { playerId } = body;
+    if (!code || !playerId || !action) return res.status(400).json({ error: 'code, playerId, action required' });
+    const result = processAction(code, playerId, action, body);
     if (result.error) return res.status(400).json(result);
     const room = getRoom(code);
     return res.status(200).json(buildView(room, playerId));

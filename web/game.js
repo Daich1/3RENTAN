@@ -2,7 +2,7 @@
 
 const LETTERS = ['A','B','C','D','E','F','G'];
 const BADGES  = ['badge-a','badge-b','badge-c','badge-d','badge-e','badge-f','badge-g'];
-const API     = '/api/room';
+const API     = '/api/game';
 const POLL_MS = 1000;
 
 // ===== State =====
@@ -24,11 +24,19 @@ function showScreen(id) {
 }
 
 // ===== API =====
-async function api(path, opts) {
-  const res = await fetch(API + path, {
+async function apiPost(body) {
+  const res = await fetch(API, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    ...opts,
+    body: JSON.stringify(body),
   });
+  const data = await res.json();
+  if (!res.ok && data.error) throw new Error(data.error);
+  return data;
+}
+async function apiGet(params) {
+  const qs = new URLSearchParams(params).toString();
+  const res = await fetch(API + '?' + qs);
   const data = await res.json();
   if (!res.ok && data.error) throw new Error(data.error);
   return data;
@@ -46,7 +54,7 @@ function stopPolling() {
 async function poll() {
   if (!roomCode || !myPlayerId) return;
   try {
-    const v = await api(`/${roomCode}?playerId=${myPlayerId}`, { method: 'GET' });
+    const v = await apiGet({ code: roomCode, playerId: myPlayerId });
     renderView(v);
   } catch (e) {
     // Silent fail for transient network issues
@@ -74,7 +82,7 @@ $('#btn-create-room').addEventListener('click', async () => {
   $('#create-status').textContent = '作成中...';
   try {
     const rounds = parseInt($('#create-rounds').value) || 5;
-    const data = await api('', { method: 'POST', body: JSON.stringify({ name, rounds }) });
+    const data = await apiPost({ action: 'create', name, rounds });
     myPlayerId = data.playerId;
     roomCode = data.code;
     showScreen('lobby');
@@ -95,10 +103,7 @@ $('#btn-join-room').addEventListener('click', async () => {
   $('#btn-join-room').disabled = true;
   $('#join-status').textContent = '参加中...';
   try {
-    const data = await api(`/${code}`, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'join', name }),
-    });
+    const data = await apiPost({ action: 'join', code, name });
     myPlayerId = data.playerId;
     roomCode = code;
     showScreen('lobby');
@@ -113,10 +118,7 @@ $('#btn-join-room').addEventListener('click', async () => {
 // ===== Send Action =====
 async function sendAction(action, extra = {}) {
   try {
-    await api(`/${roomCode}`, {
-      method: 'POST',
-      body: JSON.stringify({ action, playerId: myPlayerId, ...extra }),
-    });
+    await apiPost({ action, code: roomCode, playerId: myPlayerId, ...extra });
   } catch (e) {
     console.error('Action failed:', e.message);
   }

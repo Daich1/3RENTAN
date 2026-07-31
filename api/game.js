@@ -1,7 +1,7 @@
 // Single serverless function for all game operations.
 // 状態は lib/store.js が Redis に永続化する（インスタンス間で共有される）。
 
-const { createRoom, joinRoom, processAction, getView } = require('../lib/store');
+const { createRoom, joinRoom, processAction, getView, storageEnabled } = require('../lib/store');
 
 // 「見つからない」系は 404、入力・進行の不正は 400
 const NOT_FOUND = 'ルームが見つかりません';
@@ -16,6 +16,12 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
+    // GET ?health=1: 共有ストレージが効いているかの確認用。
+    // memory のままだとインスタンスを跨いだ瞬間に部屋を見失う
+    if (req.method === 'GET' && req.query.health !== undefined) {
+      return res.status(200).json({ ok: true, storage: storageEnabled ? 'redis' : 'memory' });
+    }
+
     // GET: poll state
     if (req.method === 'GET') {
       const { code, playerId } = req.query;

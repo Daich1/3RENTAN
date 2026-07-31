@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>SANRENTAN -Nelo Edition-</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -10,7 +10,9 @@
 
 <!-- 共通カウントダウン -->
 <div id="global-timer" class="global-timer">
-  <div id="global-timer-fill" class="global-timer-fill"></div>
+  <div class="global-timer-track">
+    <div id="global-timer-fill" class="global-timer-fill"></div>
+  </div>
   <span id="global-timer-text" class="global-timer-text"></span>
 </div>
 
@@ -18,183 +20,319 @@
 
   <!-- 1. タイトル -->
   <div id="screen-title" class="screen active">
-    <div class="title-card">
-      <div class="color-bar">
-        <span style="background:#333"></span><span style="background:#fff;border:1px solid #ccc"></span>
-        <span style="background:#E53935"></span><span style="background:#1E88E5"></span>
-        <span style="background:#FDD835"></span><span style="background:#43A047"></span>
-        <span style="background:#FB8C00"></span>
+    <div class="screen-inner">
+      <div class="ticket ticket-dark title-card">
+        <div class="strip"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ticket-body">
+          <div class="title-frame">
+            <div class="color-bar">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <h1>SANRENTAN</h1>
+            <p class="subtitle">PARTY RACE TICKET</p>
+            <div class="divider-light"></div>
+            <p class="edition">-Nelo Edition-</p>
+          </div>
+        </div>
       </div>
-      <h1>SANRENTAN</h1>
-      <p class="subtitle">PARTY RACE TICKET</p>
-      <div class="divider-light"></div>
-      <p class="edition">-Nelo Edition-</p>
-      <button id="btn-go-create" class="btn-accent">ルームを作成</button>
-      <button id="btn-go-join" class="btn-ghost">ルームに参加</button>
+
+      <div class="title-actions">
+        <button id="btn-go-create" class="btn-accent">ルームを作る</button>
+        <button id="btn-go-join" class="btn-ghost">ルームに参加</button>
+      </div>
+
+      <div class="title-footer">
+        <span class="barcode">||||⦀|||⦀||||</span>
+        <span class="players-note">2〜8 PLAYERS</span>
+        <span class="barcode">||||⦀|||⦀||||</span>
+      </div>
     </div>
   </div>
 
   <!-- 2. ルーム作成 -->
   <div id="screen-create" class="screen">
-    <div class="card">
-      <h2>ルーム作成</h2>
-      <input id="create-name" type="text" placeholder="あなたの名前" maxlength="10" class="input-field">
-      <label class="round-label">ラウンド数
-        <select id="create-rounds" class="input-field">
-          <option value="3">3</option><option value="5" selected>5</option>
-          <option value="7">7</option><option value="10">10</option>
-        </select>
-      </label>
-      <label class="round-label">回答の制限時間（秒）
-        <input id="create-answer-sec" type="number" value="120" min="15" max="600" step="5" class="input-field">
-      </label>
-      <label class="round-label">発表の制限時間（秒）
-        <input id="create-reveal-sec" type="number" value="60" min="10" max="300" step="5" class="input-field">
-      </label>
-      <button id="btn-create-room" class="btn-primary">作成する</button>
-      <button class="btn-link btn-back" data-to="title">戻る</button>
-      <p id="create-status" class="status-msg"></p>
+    <div class="screen-inner">
+      <div class="ticket card">
+        <div class="strip"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ticket-body">
+          <div class="ticket-head">
+            <span class="ticket-label">PARTY RACE TICKET</span>
+            <span class="ticket-pill">発券</span>
+          </div>
+          <h2>ルームを作る</h2>
+          <p class="lead">あなたがホストです。設定はあとから変更できません。</p>
+          <div class="divider-dark"></div>
+
+          <label class="field">
+            <span class="field-label">あなたの名前</span>
+            <input id="create-name" type="text" placeholder="Nelo" maxlength="10" class="input-field">
+          </label>
+          <label class="field">
+            <span class="field-label">ラウンド数</span>
+            <div class="select-wrap">
+              <select id="create-rounds" class="input-field">
+                <option value="3">3 ラウンド</option><option value="5" selected>5 ラウンド</option>
+                <option value="7">7 ラウンド</option><option value="10">10 ラウンド</option>
+              </select>
+            </div>
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span class="field-label">回答 制限秒</span>
+              <input id="create-answer-sec" type="number" value="120" min="15" max="600" step="5" class="input-field input-num">
+            </label>
+            <label class="field">
+              <span class="field-label">発表 制限秒</span>
+              <input id="create-reveal-sec" type="number" value="60" min="10" max="300" step="5" class="input-field input-num">
+            </label>
+          </div>
+
+          <div class="divider-dark"></div>
+          <button id="btn-create-room" class="btn-primary">この設定でルームを作る</button>
+          <button class="btn-link btn-back" data-to="title">タイトルに戻る</button>
+          <p id="create-status" class="status-msg"></p>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- 3. ルーム参加 -->
   <div id="screen-join" class="screen">
-    <div class="card">
-      <h2>ルームに参加</h2>
-      <input id="join-name" type="text" placeholder="あなたの名前" maxlength="10" class="input-field">
-      <input id="join-code" type="text" placeholder="ルームコード (4文字)" maxlength="4" class="input-field input-code" autocapitalize="characters">
-      <button id="btn-join-room" class="btn-primary">参加する</button>
-      <button class="btn-link btn-back" data-to="title">戻る</button>
-      <p id="join-status" class="status-msg"></p>
+    <div class="screen-inner">
+      <div class="ticket card">
+        <div class="strip"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ticket-body">
+          <div class="ticket-head">
+            <span class="ticket-label">PARTY RACE TICKET</span>
+          </div>
+          <h2>ルームに参加</h2>
+          <p class="lead">ホストから聞いた4文字を入力してね。</p>
+          <div class="divider-dark"></div>
+
+          <label class="field">
+            <span class="field-label">あなたの名前</span>
+            <input id="join-name" type="text" placeholder="ミナ" maxlength="10" class="input-field">
+          </label>
+          <label class="field">
+            <span class="field-label">ルームコード</span>
+            <input id="join-code" type="text" placeholder="ABCD" maxlength="4" class="input-field input-code" autocapitalize="characters" autocomplete="off" spellcheck="false">
+          </label>
+
+          <div class="divider-dark"></div>
+          <button id="btn-join-room" class="btn-primary">参加する</button>
+          <button class="btn-link btn-back" data-to="title">タイトルに戻る</button>
+          <p id="join-status" class="status-msg"></p>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- 4. ロビー -->
   <div id="screen-lobby" class="screen">
-    <div class="card">
-      <div class="room-code-display">
-        <span class="room-code-label">ルームコード</span>
-        <span id="lobby-code" class="room-code-value"></span>
+    <div class="screen-inner">
+      <div class="ticket card">
+        <div class="strip"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ticket-body">
+          <div class="ticket-head">
+            <span class="ticket-label">WAITING ROOM</span>
+            <span id="lobby-rules" class="ticket-note"></span>
+          </div>
+
+          <div class="room-code-display">
+            <span class="room-code-label">ルームコード</span>
+            <span id="lobby-code" class="room-code-value"></span>
+          </div>
+
+          <div class="divider-dark"></div>
+          <div class="section-head">
+            <span class="section-title">参加者</span>
+            <span class="section-note">親は順番に交代します</span>
+          </div>
+          <div id="lobby-players" class="lobby-players"></div>
+
+          <div id="lobby-host-controls" class="lobby-controls" style="display:none">
+            <div class="divider-dark"></div>
+            <button id="btn-start-game" class="btn-primary" disabled>ゲームスタート</button>
+          </div>
+          <p id="lobby-status" class="status-msg"></p>
+        </div>
       </div>
-      <h2>参加者</h2>
-      <div id="lobby-players" class="lobby-players"></div>
-      <p id="lobby-rules" class="hint"></p>
-      <div id="lobby-host-controls" class="lobby-controls" style="display:none">
-        <button id="btn-start-game" class="btn-primary" disabled>ゲームスタート</button>
-      </div>
-      <p id="lobby-status" class="status-msg"></p>
     </div>
   </div>
 
   <!-- 5. お題発表（親が山札を引く） -->
   <div id="screen-draw" class="screen">
-    <div class="topic-card">
-      <div class="color-bar small">
-        <span style="background:#333"></span><span style="background:#fff;border:1px solid #ccc"></span>
-        <span style="background:#E53935"></span><span style="background:#1E88E5"></span>
-        <span style="background:#FDD835"></span><span style="background:#43A047"></span>
-        <span style="background:#FB8C00"></span>
-      </div>
-      <div class="topic-header">
-        <span class="ticket-label">PARTY RACE TICKET</span>
+    <div class="screen-inner">
+      <div class="screen-caption">
         <span id="draw-round-badge" class="round-badge"></span>
+        <span class="caption-title">山札からお題を1枚</span>
       </div>
 
-      <div id="draw-deck" class="draw-deck">
-        <div class="deck-stack">
-          <span class="deck-card"></span><span class="deck-card"></span><span class="deck-card"></span>
+      <div class="ticket topic-card">
+        <div class="strip"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ticket-body">
+          <div class="ticket-head">
+            <span class="ticket-label">PARTY RACE TICKET</span>
+            <span class="ticket-pill">お題</span>
+          </div>
+
+          <div id="draw-deck" class="draw-deck">
+            <div class="deck-stack">
+              <span class="deck-card"></span><span class="deck-card"></span>
+              <span class="deck-card deck-card-face">
+                <b>SANRENTAN</b><em>PARTY RACE TICKET</em>
+              </span>
+            </div>
+            <p class="draw-hint">山札からお題を引いています…</p>
+          </div>
+
+          <div id="draw-candidate" style="display:none">
+            <h2 id="draw-question" class="topic-question"></h2>
+            <div class="divider-dark"></div>
+            <div id="draw-options" class="topic-options"></div>
+            <div class="divider-dark"></div>
+            <div class="topic-footer">
+              <span class="barcode">|||⦀||⦀|||</span>
+              <span class="footer-brand">SANRENTAN <small>-Nelo Edition-</small></span>
+              <span class="barcode">|||⦀||⦀|||</span>
+            </div>
+          </div>
         </div>
-        <p class="draw-hint">山札からお題を引いています…</p>
       </div>
 
-      <div id="draw-candidate" style="display:none">
-        <h2 id="draw-question" class="topic-question"></h2>
-        <div class="divider-dark"></div>
-        <div id="draw-options" class="topic-options"></div>
-        <div class="topic-footer">
-          <span class="barcode">||||||||</span>
-          <span class="footer-brand">SANRENTAN <small>-Nelo Edition-</small></span>
-          <span class="barcode">||||||||</span>
-        </div>
+      <div id="draw-controls" class="draw-controls" style="display:none">
+        <button id="btn-draw-confirm" class="btn-accent">このお題で確定する</button>
+        <button id="btn-draw-reroll" class="btn-reroll">別のお題を引く ⟳</button>
       </div>
-    </div>
-
-    <div id="draw-controls" class="draw-controls" style="display:none">
-      <button id="btn-draw-confirm" class="btn-primary compact">このお題で確定</button>
-      <button id="btn-draw-reroll" class="btn-reroll">次のお題を引く ⟳</button>
     </div>
   </div>
 
   <!-- 6. 選択（回答） -->
   <div id="screen-select" class="screen">
-    <div class="card">
-      <h2 id="select-title"></h2>
-      <p id="select-hint" class="hint"></p>
-      <div id="select-question" class="mini-question"></div>
-      <div id="select-ranks" class="rank-display">
-        <div class="rank-slot"><span class="rank-num">1位</span><span class="rank-val">？</span></div>
-        <div class="rank-slot"><span class="rank-num">2位</span><span class="rank-val">？</span></div>
-        <div class="rank-slot"><span class="rank-num">3位</span><span class="rank-val">？</span></div>
-      </div>
-      <div id="select-choices" class="choice-list"></div>
-      <div class="action-row">
-        <button id="btn-undo" class="btn-secondary" disabled>やり直し</button>
-        <button id="btn-confirm" class="btn-primary compact" disabled>確定</button>
+    <div class="screen-inner">
+      <div class="ticket card">
+        <div class="strip"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ticket-body">
+          <div class="ticket-head">
+            <span id="select-role" class="role-chip">予想者</span>
+            <span class="ticket-label">PARTY RACE TICKET</span>
+          </div>
+          <div id="select-question" class="mini-question"></div>
+          <h2 id="select-title" class="select-title"></h2>
+          <p id="select-hint" class="select-note"></p>
+          <div class="divider-dark"></div>
+
+          <div id="select-ranks" class="rank-display">
+            <div class="rank-slot"><span class="rank-num">1位</span><span class="rank-val">？</span></div>
+            <div class="rank-slot"><span class="rank-num">2位</span><span class="rank-val">？</span></div>
+            <div class="rank-slot"><span class="rank-num">3位</span><span class="rank-val">？</span></div>
+          </div>
+
+          <p class="pick-hint">上位から順にタップして選ぼう</p>
+          <div id="select-choices" class="choice-list"></div>
+
+          <div class="action-row">
+            <button id="btn-confirm" class="btn-primary" disabled>この予想で確定</button>
+            <button id="btn-undo" class="btn-secondary" disabled>やり直す</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- 7. 待機画面 -->
   <div id="screen-wait" class="screen">
-    <div class="card center">
-      <div class="spinner"></div>
-      <h2 id="wait-title"></h2>
-      <p id="wait-message" class="hint"></p>
-      <div id="wait-progress" class="wait-progress"></div>
+    <div class="screen-inner">
+      <div class="panel center">
+        <div class="wait-deck">
+          <span class="wait-deck-card"></span><span class="wait-deck-card"></span>
+          <span class="wait-deck-card wait-deck-face">
+            <b>SANRENTAN</b><em>PARTY RACE TICKET</em>
+          </span>
+        </div>
+        <h2 id="wait-title"></h2>
+        <p id="wait-message" class="hint"></p>
+        <div class="wait-dots"><i></i><i></i><i></i></div>
+        <div id="wait-progress" class="wait-progress"></div>
+      </div>
     </div>
   </div>
 
   <!-- 8. 発表（reveal） -->
   <div id="screen-reveal" class="screen">
-    <div class="card">
-      <h2>発表</h2>
-      <div id="reveal-question" class="mini-question"></div>
-      <div id="reveal-oya-answer" class="oya-answer-box" style="display:none"></div>
-      <div id="reveal-scores" class="result-list"></div>
-      <div id="reveal-standings" class="standings"></div>
-      <div class="reveal-ready">
-        <div id="reveal-ready-progress" class="wait-progress"></div>
-        <button id="btn-ready-next" class="btn-primary compact">次へ ▶</button>
+    <div class="screen-inner">
+      <div class="screen-caption">
+        <span id="reveal-eyebrow" class="caption-eyebrow">REVEAL</span>
+      </div>
+      <div class="ticket card">
+        <div class="strip"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ticket-body">
+          <div class="ticket-head">
+            <span class="ticket-label">OYA'S TOP 3</span>
+            <span id="reveal-open-label" class="ticket-note"></span>
+          </div>
+          <div id="reveal-question" class="mini-question"></div>
+          <div class="divider-dark"></div>
+
+          <div id="reveal-hype" class="hype-line"></div>
+          <div id="reveal-cards" class="flip-cards"></div>
+          <div id="reveal-payout" class="payout-wrap"></div>
+          <div id="reveal-scores" class="result-list"></div>
+
+          <div class="divider-dark"></div>
+          <div class="section-head">
+            <span class="section-title">みんなの予想</span>
+            <span class="section-note"><b class="mk-o">○</b> 順位まで <b class="mk-s">△</b> 選択のみ</span>
+          </div>
+          <div id="reveal-preds" class="pred-list"></div>
+          <div id="reveal-standings" class="standings"></div>
+
+          <div class="divider-dark"></div>
+          <div class="reveal-ready">
+            <div id="reveal-ready-progress" class="wait-progress"></div>
+            <button id="btn-ready-next" class="btn-primary">次のレースへ ▶</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- 9. 最終結果 -->
   <div id="screen-final" class="screen">
-    <div class="card final-card">
-      <div class="color-bar small">
-        <span style="background:#333"></span><span style="background:#fff;border:1px solid #ccc"></span>
-        <span style="background:#E53935"></span><span style="background:#1E88E5"></span>
-        <span style="background:#FDD835"></span><span style="background:#43A047"></span>
-        <span style="background:#FB8C00"></span>
+    <div class="screen-inner">
+      <div class="screen-caption">
+        <span class="caption-eyebrow">FINAL RESULT</span>
+        <span class="caption-title">払戻し確定！</span>
       </div>
-      <h2>最終結果</h2>
-      <div class="divider-dark"></div>
-      <div id="final-ranking" class="final-ranking"></div>
-      <div class="action-row col">
-        <button id="btn-play-again" class="btn-primary" style="display:none">もう一回遊ぶ</button>
-        <button id="btn-back-lobby" class="btn-secondary" style="display:none">ロビーに戻る</button>
-        <button id="btn-back-title" class="btn-link">タイトルに戻る</button>
+      <div class="ticket card final-card">
+        <div class="strip"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ticket-body">
+          <div id="final-ranking" class="final-ranking"></div>
+          <div class="divider-dark"></div>
+          <div class="action-row col">
+            <button id="btn-play-again" class="btn-primary" style="display:none">もう一度あそぶ</button>
+            <button id="btn-back-lobby" class="btn-secondary" style="display:none">ロビーへ</button>
+            <button id="btn-back-title" class="btn-link">タイトルへ</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- エラー -->
   <div id="screen-error" class="screen">
-    <div class="card center">
-      <h2>エラー</h2>
-      <p id="error-message" class="hint"></p>
-      <button class="btn-primary btn-back" data-to="title">タイトルに戻る</button>
+    <div class="screen-inner">
+      <div class="ticket card error-card">
+        <div class="strip strip-alert"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ticket-body center">
+          <div class="empty-mark">EMPTY</div>
+          <div class="empty-sub">NO TICKET FOUND</div>
+          <div class="divider-dark"></div>
+          <h2>エラー</h2>
+          <p id="error-message" class="hint"></p>
+          <button class="btn-primary btn-back" data-to="title">タイトルへ戻る</button>
+        </div>
+      </div>
     </div>
   </div>
 

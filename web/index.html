@@ -7,6 +7,13 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<!-- 共通カウントダウン -->
+<div id="global-timer" class="global-timer">
+  <div id="global-timer-fill" class="global-timer-fill"></div>
+  <span id="global-timer-text" class="global-timer-text"></span>
+</div>
+
 <div id="app">
 
   <!-- 1. タイトル -->
@@ -38,6 +45,12 @@
           <option value="7">7</option><option value="10">10</option>
         </select>
       </label>
+      <label class="round-label">回答の制限時間（秒）
+        <input id="create-answer-sec" type="number" value="120" min="15" max="600" step="5" class="input-field">
+      </label>
+      <label class="round-label">発表の制限時間（秒）
+        <input id="create-reveal-sec" type="number" value="60" min="10" max="300" step="5" class="input-field">
+      </label>
       <button id="btn-create-room" class="btn-primary">作成する</button>
       <button class="btn-link btn-back" data-to="title">戻る</button>
       <p id="create-status" class="status-msg"></p>
@@ -65,6 +78,7 @@
       </div>
       <h2>参加者</h2>
       <div id="lobby-players" class="lobby-players"></div>
+      <p id="lobby-rules" class="hint"></p>
       <div id="lobby-host-controls" class="lobby-controls" style="display:none">
         <button id="btn-start-game" class="btn-primary" disabled>ゲームスタート</button>
       </div>
@@ -72,8 +86,8 @@
     </div>
   </div>
 
-  <!-- 5. お題表示 -->
-  <div id="screen-topic" class="screen">
+  <!-- 5. お題発表（親が山札を引く） -->
+  <div id="screen-draw" class="screen">
     <div class="topic-card">
       <div class="color-bar small">
         <span style="background:#333"></span><span style="background:#fff;border:1px solid #ccc"></span>
@@ -83,21 +97,35 @@
       </div>
       <div class="topic-header">
         <span class="ticket-label">PARTY RACE TICKET</span>
-        <span id="round-badge" class="round-badge"></span>
+        <span id="draw-round-badge" class="round-badge"></span>
       </div>
-      <h2 id="topic-question" class="topic-question"></h2>
-      <div class="divider-dark"></div>
-      <div id="topic-options" class="topic-options"></div>
-      <div class="topic-footer">
-        <span class="barcode">||||||||</span>
-        <span class="footer-brand">SANRENTAN <small>-Nelo Edition-</small></span>
-        <span class="barcode">||||||||</span>
+
+      <div id="draw-deck" class="draw-deck">
+        <div class="deck-stack">
+          <span class="deck-card"></span><span class="deck-card"></span><span class="deck-card"></span>
+        </div>
+        <p class="draw-hint">山札からお題を引いています…</p>
+      </div>
+
+      <div id="draw-candidate" style="display:none">
+        <h2 id="draw-question" class="topic-question"></h2>
+        <div class="divider-dark"></div>
+        <div id="draw-options" class="topic-options"></div>
+        <div class="topic-footer">
+          <span class="barcode">||||||||</span>
+          <span class="footer-brand">SANRENTAN <small>-Nelo Edition-</small></span>
+          <span class="barcode">||||||||</span>
+        </div>
       </div>
     </div>
-    <p id="topic-oya-label" class="oya-label"></p>
+
+    <div id="draw-controls" class="draw-controls" style="display:none">
+      <button id="btn-draw-confirm" class="btn-primary compact">このお題で確定</button>
+      <button id="btn-draw-reroll" class="btn-reroll">次のお題を引く ⟳</button>
+    </div>
   </div>
 
-  <!-- 6. 選択画面 -->
+  <!-- 6. 選択（回答） -->
   <div id="screen-select" class="screen">
     <div class="card">
       <h2 id="select-title"></h2>
@@ -126,14 +154,17 @@
     </div>
   </div>
 
-  <!-- 8. 結果 -->
-  <div id="screen-result" class="screen">
+  <!-- 8. 発表（reveal） -->
+  <div id="screen-reveal" class="screen">
     <div class="card">
-      <h2>結果発表</h2>
-      <div id="result-oya-answer" class="oya-answer-box"></div>
-      <div id="result-scores" class="result-list"></div>
-      <div id="result-standings" class="standings"></div>
-      <button id="btn-next-round" class="btn-primary" style="display:none">次のラウンドへ</button>
+      <h2>発表</h2>
+      <div id="reveal-oya-answer" class="oya-answer-box" style="display:none"></div>
+      <div id="reveal-scores" class="result-list"></div>
+      <div id="reveal-standings" class="standings"></div>
+      <div class="reveal-ready">
+        <div id="reveal-ready-progress" class="wait-progress"></div>
+        <button id="btn-ready-next" class="btn-primary compact">次へ ▶</button>
+      </div>
     </div>
   </div>
 
@@ -168,7 +199,6 @@
 
 </div>
 
-<script src="odai.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

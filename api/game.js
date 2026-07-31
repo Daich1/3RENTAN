@@ -26,7 +26,13 @@ module.exports = (req, res) => {
     if (action === 'create') {
       const name = (body.name || '').trim();
       if (!name) return res.status(400).json({ error: '名前を入力してください' });
-      const result = createRoom(name, parseInt(body.rounds) || 5);
+      const clamp = (v, def, min, max) => {
+        const n = parseInt(v);
+        return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
+      };
+      const answerSeconds = clamp(body.answerSeconds, 120, 15, 600);
+      const revealSeconds = clamp(body.revealSeconds, 60, 10, 300);
+      const result = createRoom(name, parseInt(body.rounds) || 5, answerSeconds, revealSeconds);
       return res.status(200).json(result);
     }
 

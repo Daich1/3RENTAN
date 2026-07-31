@@ -4,6 +4,7 @@ const LETTERS = ['A','B','C','D','E','F','G'];
 const BADGES  = ['badge-a','badge-b','badge-c','badge-d','badge-e','badge-f','badge-g'];
 const API     = '/api/game';
 const POLL_MS = 1000;
+const DRAW_TOTAL_MS = 45000; // サーバー DRAW_TIMEOUT と一致
 
 // ===== State =====
 let myPlayerId = null;
@@ -11,12 +12,24 @@ let roomCode   = null;
 let pollTimer  = null;
 let lastPhase  = null;
 let selPicks   = [];
-let selMode    = null; // 'oya' | 'predict'
+let selMode    = null; // 'oya' | 'predict' | null
 let selOdai    = null;
+let lastCandidateId = null;
+
+// Timer
+let clockOffset  = 0;      // serverNow - clientNow
+let timerDeadline = null;
+let timerTotalMs = 0;
+let timerTicker  = null;
 
 // ===== Helpers =====
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
+function esc(str) {
+  return String(str).replace(/[&<>"']/g, c => (
+    { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]
+  ));
+}
 function showScreen(id) {
   $$('.screen').forEach(s => s.classList.remove('active'));
   const el = $(`#screen-${id}`);
@@ -45,7 +58,7 @@ async function apiGet(params) {
 // ===== Polling =====
 function startPolling() {
   stopPolling();
-  poll(); // immediate first
+  poll();
   pollTimer = setInterval(poll, POLL_MS);
 }
 function stopPolling() {
@@ -61,16 +74,45 @@ async function poll() {
   }
 }
 
+// ===== Countdown Timer =====
+function updateTimer(v) {
+  const timed = v.deadline && ['draw','answer','reveal'].includes(v.phase);
+  if (timed) {
+    timerDeadline = v.deadline;
+    timerTotalMs = v.phase === 'draw' ? DRAW_TOTAL_MS
+      : v.phase === 'answer' ? (v.answerSeconds || 120) * 1000
+      : (v.revealSeconds || 60) * 1000;
+    $('#global-timer').style.display = 'block';
+    if (!timerTicker) timerTicker = setInterval(tickTimer, 250);
+    tickTimer();
+  } else {
+    timerDeadline = null;
+    $('#global-timer').style.display = 'none';
+  }
+}
+function tickTimer() {
+  if (!timerDeadline) return;
+  const remain = timerDeadline - (Date.now() + clockOffset);
+  const secs = Math.max(0, Math.ceil(remain / 1000));
+  const pct = Math.max(0, Math.min(100, (remain / timerTotalMs) * 100));
+  $('#global-timer-text').textContent = `残り ${secs} 秒`;
+  const fill = $('#global-timer-fill');
+  fill.style.width = pct + '%';
+  fill.classList.toggle('danger', secs <= 10);
+}
+
 // ===== Navigation =====
 $$('.btn-back').forEach(b => b.addEventListener('click', () => {
   stopPolling();
   myPlayerId = null; roomCode = null;
+  updateTimer({});
   showScreen(b.dataset.to);
 }));
 $('#btn-go-create').addEventListener('click', () => showScreen('create'));
 $('#btn-go-join').addEventListener('click', () => showScreen('join'));
 $('#btn-back-title').addEventListener('click', () => {
   stopPolling(); myPlayerId = null; roomCode = null;
+  updateTimer({});
   showScreen('title');
 });
 
@@ -82,7 +124,9 @@ $('#btn-create-room').addEventListener('click', async () => {
   $('#create-status').textContent = '作成中...';
   try {
     const rounds = parseInt($('#create-rounds').value) || 5;
-    const data = await apiPost({ action: 'create', name, rounds });
+    const answerSeconds = parseInt($('#create-answer-sec').value) || 120;
+    const revealSeconds = parseInt($('#create-reveal-sec').value) || 60;
+    const data = await apiPost({ action: 'create', name, rounds, answerSeconds, revealSeconds });
     myPlayerId = data.playerId;
     roomCode = data.code;
     showScreen('lobby');
@@ -119,6 +163,7 @@ $('#btn-join-room').addEventListener('click', async () => {
 async function sendAction(action, extra = {}) {
   try {
     await apiPost({ action, code: roomCode, playerId: myPlayerId, ...extra });
+    poll(); // 即時反映
   } catch (e) {
     console.error('Action failed:', e.message);
   }
@@ -126,19 +171,22 @@ async function sendAction(action, extra = {}) {
 
 // ===== Game Controls =====
 $('#btn-start-game').addEventListener('click', () => sendAction('start'));
-$('#btn-next-round').addEventListener('click', () => sendAction('next_round'));
+$('#btn-draw-confirm').addEventListener('click', () => sendAction('draw_confirm'));
+$('#btn-draw-reroll').addEventListener('click', () => sendAction('draw_reroll'));
+$('#btn-ready-next').addEventListener('click', () => sendAction('ready_next'));
 $('#btn-play-again').addEventListener('click', () => sendAction('play_again'));
 $('#btn-back-lobby').addEventListener('click', () => sendAction('back_to_lobby'));
 
 // ===== Render Dispatcher =====
 function renderView(v) {
+  clockOffset = (typeof v.now === 'number') ? v.now - Date.now() : 0;
+  updateTimer(v);
   switch (v.phase) {
-    case 'lobby':      showScreen('lobby');  renderLobby(v);          break;
-    case 'topic':      showScreen('topic');  renderTopic(v);          break;
-    case 'oya_select': renderOyaPhase(v);                             break;
-    case 'predicting': renderPredictPhase(v);                         break;
-    case 'results':    showScreen('result'); renderResults(v);        break;
-    case 'final':      showScreen('final');  renderFinal(v);          break;
+    case 'lobby':   showScreen('lobby'); renderLobby(v);  break;
+    case 'draw':    renderDraw(v);                        break;
+    case 'answer':  renderAnswer(v);                      break;
+    case 'reveal':  renderReveal(v);                      break;
+    case 'final':   showScreen('final'); renderFinal(v);  break;
   }
   lastPhase = v.phase;
 }
@@ -146,12 +194,13 @@ function renderView(v) {
 // ===== Lobby =====
 function renderLobby(v) {
   $('#lobby-code').textContent = v.roomCode;
+  $('#lobby-rules').textContent = `回答 ${v.answerSeconds}秒 / 発表 ${v.revealSeconds}秒 ・ 全${v.totalRounds}R`;
   const c = $('#lobby-players');
   c.innerHTML = '';
   v.players.forEach((p, i) => {
     const d = document.createElement('div');
     d.className = 'lobby-player';
-    d.innerHTML = `<span class="p-dot" style="background:${p.color}"></span><span>${p.name}</span>${i===0?'<span class="p-host">HOST</span>':''}`;
+    d.innerHTML = `<span class="p-dot" style="background:${p.color}"></span><span>${esc(p.name)}</span>${i===0?'<span class="p-host">HOST</span>':''}`;
     c.appendChild(d);
   });
   if (v.isHost) {
@@ -166,58 +215,57 @@ function renderLobby(v) {
   }
 }
 
-// ===== Topic =====
-function renderTopic(v) {
-  const odai = v.odai;
-  if (!odai) return;
-  $('#round-badge').textContent = `第${v.round}R / ${v.totalRounds}`;
-  $('#topic-question').textContent = odai.q;
-  const c = $('#topic-options');
-  c.innerHTML = '';
-  odai.opts.forEach((o, i) => {
-    const d = document.createElement('div');
-    d.className = 'topic-opt';
-    d.innerHTML = `<span class="opt-badge ${BADGES[i]}">${LETTERS[i]}</span> ${o}`;
-    c.appendChild(d);
-  });
-  $('#topic-oya-label').textContent = `親: ${v.oyaName}`;
-}
-
-// ===== Oya Phase =====
-function renderOyaPhase(v) {
+// ===== Draw (お題発表・親主導) =====
+function renderDraw(v) {
   if (v.isOya) {
-    // Only reset selection UI on phase change
-    if (lastPhase !== 'oya_select') {
-      selPicks = []; selMode = 'oya'; selOdai = v.odai;
-      showScreen('select');
-      setupSelectUI(v);
+    showScreen('draw');
+    $('#draw-round-badge').textContent = `第${v.round}R / ${v.totalRounds}`;
+    if (lastPhase !== 'draw') lastCandidateId = null;
+    const odai = v.odai;
+    if (odai && odai.id !== lastCandidateId) {
+      lastCandidateId = odai.id;
+      playDrawReveal(odai);
     }
   } else {
     showScreen('wait');
-    $('#wait-title').textContent = `${v.oyaName} が選択中...`;
-    $('#wait-message').textContent = '親が自分のTop3を選んでいます';
+    $('#wait-title').textContent = `${v.oyaName} がお題を選択中`;
+    $('#wait-message').textContent = '親が山札からお題を引いています…';
     $('#wait-progress').innerHTML = '';
+    lastCandidateId = null;
   }
 }
+function playDrawReveal(odai) {
+  const deck = $('#draw-deck'), cand = $('#draw-candidate'), ctrl = $('#draw-controls');
+  deck.style.display = ''; cand.style.display = 'none'; ctrl.style.display = 'none';
+  deck.classList.remove('shuffling'); void deck.offsetWidth; deck.classList.add('shuffling');
+  setTimeout(() => {
+    $('#draw-question').textContent = odai.q;
+    const c = $('#draw-options'); c.innerHTML = '';
+    odai.opts.forEach((o, i) => {
+      const d = document.createElement('div');
+      d.className = 'topic-opt';
+      d.innerHTML = `<span class="opt-badge ${BADGES[i]}">${LETTERS[i]}</span> ${esc(o)}`;
+      c.appendChild(d);
+    });
+    deck.style.display = 'none';
+    cand.style.display = ''; ctrl.style.display = '';
+    cand.classList.remove('pop'); void cand.offsetWidth; cand.classList.add('pop');
+  }, 800);
+}
 
-// ===== Predict Phase =====
-function renderPredictPhase(v) {
-  if (v.isOya) {
-    showScreen('wait');
-    $('#wait-title').textContent = 'みんなが予想中...';
-    $('#wait-message').textContent = '';
-    renderSubmitProgress(v);
-  } else if (v.hasSubmitted) {
+// ===== Answer (回答・一斉) =====
+function renderAnswer(v) {
+  if (v.hasSubmitted) {
     showScreen('wait');
     $('#wait-title').textContent = '提出済み！';
-    $('#wait-message').textContent = '他のプレイヤーを待っています';
+    $('#wait-message').textContent = '全員の回答を待っています';
     renderSubmitProgress(v);
-  } else {
-    if (lastPhase !== 'predicting' || selMode !== 'predict') {
-      selPicks = []; selMode = 'predict'; selOdai = v.odai;
-      showScreen('select');
-      setupSelectUI(v);
-    }
+    return;
+  }
+  if (lastPhase !== 'answer' || selMode === null) {
+    selPicks = []; selMode = v.isOya ? 'oya' : 'predict'; selOdai = v.odai;
+    showScreen('select');
+    setupSelectUI(v);
   }
 }
 
@@ -226,11 +274,11 @@ function renderSubmitProgress(v) {
   c.innerHTML = '';
   if (!v.submittedStatus) return;
   v.players.forEach(p => {
-    if (p.id === v.oyaId) return;
     const done = v.submittedStatus[p.id];
+    const isOya = p.id === v.oyaId;
     const d = document.createElement('div');
     d.className = 'wait-player';
-    d.innerHTML = `<span class="status-dot ${done?'done':'pending'}"></span> ${p.name} ${done?'OK':'...'}`;
+    d.innerHTML = `<span class="status-dot ${done?'done':'pending'}"></span> ${esc(p.name)}${isOya?'（親）':''} ${done?'OK':'…'}`;
     c.appendChild(d);
   });
 }
@@ -241,7 +289,7 @@ function setupSelectUI(v) {
   selPicks = [];
   if (selMode === 'oya') {
     $('#select-title').textContent = '自分のTop3を選ぼう';
-    $('#select-hint').textContent = '1位〜3位の順に選んでください';
+    $('#select-hint').textContent = '1位〜3位の順に選んでください（あなたの本当の順位）';
   } else {
     $('#select-title').textContent = `${v.oyaName} のTop3を予想！`;
     $('#select-hint').textContent = '1位〜3位の順に予想してください';
@@ -260,7 +308,7 @@ function buildChoices(odai) {
     const btn = document.createElement('button');
     btn.className = 'choice-btn';
     btn.dataset.idx = i;
-    btn.innerHTML = `<span class="opt-badge ${BADGES[i]}">${LETTERS[i]}</span> ${opt}`;
+    btn.innerHTML = `<span class="opt-badge ${BADGES[i]}">${LETTERS[i]}</span> ${esc(opt)}`;
     btn.addEventListener('click', () => pickChoice(i));
     c.appendChild(btn);
   });
@@ -279,12 +327,10 @@ $('#btn-undo').addEventListener('click', () => {
 
 $('#btn-confirm').addEventListener('click', () => {
   if (selPicks.length !== 3) return;
-  const action = selMode === 'oya' ? 'submit_oya' : 'submit_predict';
-  sendAction(action, { answer: [...selPicks] });
-  // Show waiting immediately
+  sendAction('submit_answer', { answer: [...selPicks] });
   showScreen('wait');
   $('#wait-title').textContent = '提出済み！';
-  $('#wait-message').textContent = '結果を待っています...';
+  $('#wait-message').textContent = '全員の回答を待っています…';
   $('#wait-progress').innerHTML = '';
   selMode = null;
 });
@@ -320,43 +366,75 @@ function resetRanks() {
   });
 }
 
-// ===== Results =====
-function renderResults(v) {
-  const odai = v.odai;
-  // Oya answer
-  const box = $('#result-oya-answer');
+// ===== Reveal (発表・演出) =====
+function renderReveal(v) {
+  showScreen('reveal');
+  if (lastPhase !== 'reveal') playReveal(v);
+  updateReadyUI(v);
+}
+
+function playReveal(v) {
+  const odai = v.odai || {};
+  // 親の答え（最初は隠す）
+  const box = $('#reveal-oya-answer');
+  box.style.display = 'none';
   box.innerHTML = `
-    <div class="oya-answer-title">${v.oyaName} の答え</div>
+    <div class="oya-answer-title">${esc(v.oyaName)} の答え</div>
     <div class="oya-ranks">
       ${(v.oyaAnswer||[]).map((idx,r) => `
         <div class="oya-rank-chip">
           <span class="r-label">${r+1}位</span>
-          <span class="r-val"><span class="opt-badge ${BADGES[idx]}" style="width:1.2rem;height:1.2rem;font-size:.6rem">${LETTERS[idx]}</span> ${odai.opts[idx]}</span>
+          <span class="r-val"><span class="opt-badge ${BADGES[idx]}" style="width:1.2rem;height:1.2rem;font-size:.6rem">${LETTERS[idx]}</span> ${esc((odai.opts||[])[idx])}</span>
         </div>
       `).join('')}
-    </div>
-  `;
-  // Scores
-  const list = $('#result-scores');
+    </div>`;
+
+  // 予想者の手を一斉公開（役・点はまだ隠す）
+  const list = $('#reveal-scores');
   list.innerHTML = '';
-  (v.roundResults||[]).forEach((r,i) => {
+  (v.roundResults||[]).forEach(r => {
     const row = document.createElement('div');
-    row.className = `result-row ${r.cls}`;
-    row.style.animationDelay = `${i*0.1}s`;
+    row.className = 'result-row pending-reveal';
+    row.dataset.cls = r.cls;
     row.innerHTML = `
-      <span class="r-name">${r.name}</span>
-      <span class="r-yaku">${r.yaku}</span>
+      <span class="r-name">${esc(r.name)}</span>
       <span class="r-picks">${(r.pred||[]).map(i=>LETTERS[i]).join('→')}</span>
-      <span class="r-pts">${r.pts>0?'+'+r.pts:'0'}pt</span>
-    `;
+      <span class="r-yaku reveal-hide">${r.yaku}</span>
+      <span class="r-pts reveal-hide">${r.pts>0?'+'+r.pts:'0'}pt</span>
+      <span class="r-total reveal-hide">計${r.total}</span>`;
     list.appendChild(row);
   });
-  // Standings
-  const st = $('#result-standings');
-  const sorted = [...v.players].sort((a,b) => b.score - a.score);
-  st.innerHTML = `<div class="standings-title">現在の順位</div>` +
-    sorted.map(p => `<div class="standings-row"><span class="s-name">${p.name}</span><span class="s-score">${p.score}pt</span></div>`).join('');
-  $('#btn-next-round').style.display = v.isHost ? '' : 'none';
+
+  const st = $('#reveal-standings');
+  st.innerHTML = '';
+
+  // 段階演出: 予想公開 → 親の答え → 役/点を一斉
+  setTimeout(() => { box.style.display = ''; box.classList.add('pop'); }, 1400);
+  setTimeout(() => {
+    $$('#reveal-scores .result-row').forEach(row => {
+      row.classList.remove('pending-reveal');
+      if (row.dataset.cls) row.classList.add(row.dataset.cls);
+      row.querySelectorAll('.reveal-hide').forEach(el => el.classList.remove('reveal-hide'));
+    });
+    const sorted = [...v.players].sort((a,b) => b.score - a.score);
+    st.innerHTML = `<div class="standings-title">現在の順位</div>` +
+      sorted.map(p => `<div class="standings-row"><span class="s-name">${esc(p.name)}</span><span class="s-score">${p.score}pt</span></div>`).join('');
+  }, 2800);
+}
+
+function updateReadyUI(v) {
+  const c = $('#reveal-ready-progress');
+  c.innerHTML = '';
+  (v.players||[]).forEach(p => {
+    const done = v.readyStatus && v.readyStatus[p.id];
+    const d = document.createElement('div');
+    d.className = 'wait-player';
+    d.innerHTML = `<span class="status-dot ${done?'done':'pending'}"></span> ${esc(p.name)} ${done?'OK':'…'}`;
+    c.appendChild(d);
+  });
+  const btn = $('#btn-ready-next');
+  btn.disabled = !!v.isReady;
+  btn.textContent = v.isReady ? '待機中…' : '次へ ▶';
 }
 
 // ===== Final =====
@@ -370,9 +448,8 @@ function renderFinal(v) {
     row.style.animationDelay = `${i*0.12}s`;
     row.innerHTML = `
       <span class="f-rank">${i<3?['1','2','3'][i]:i+1}</span>
-      <span class="f-name">${p.name}</span>
-      <span class="f-score">${p.score} <small>pt</small></span>
-    `;
+      <span class="f-name">${esc(p.name)}</span>
+      <span class="f-score">${p.score} <small>pt</small></span>`;
     c.appendChild(row);
   });
   $('#btn-play-again').style.display = v.isHost ? '' : 'none';

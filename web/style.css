@@ -299,4 +299,11 @@ body{
   .title-card h1{font-size:2rem;letter-spacing:.2em}
   .rank-slot{width:4.5rem}
   .room-code-value{font-size:2rem}
+  /* 発表の結果行: 狭幅では予想手を隠して役・加点・累計を優先表示 */
+  .result-row{gap:.3rem;padding:.55rem}
+  .result-row .r-picks{display:none}
+  .r-name{min-width:2.8rem;font-size:.85rem}
+  .r-yaku{font-size:.72rem}
+  .r-pts{font-size:1rem;min-width:2.2rem}
+  .result-row .r-total{font-size:.78rem;min-width:2.6rem}
 }

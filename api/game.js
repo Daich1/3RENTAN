@@ -46,7 +46,7 @@ module.exports = (req, res) => {
       return res.status(200).json({ playerId: result.playerId, view: buildView(room, result.playerId) });
     }
 
-    // Game actions: start, submit_oya, submit_predict, next_round, play_again, back_to_lobby
+    // Game actions: start, draw_reroll, draw_confirm, submit_answer, ready_next, play_again, back_to_lobby
     const code = (body.code || '').toUpperCase();
     const { playerId } = body;
     if (!code || !playerId || !action) return res.status(400).json({ error: 'code, playerId, action required' });

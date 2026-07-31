@@ -4,7 +4,7 @@ const LETTERS = ['A','B','C','D','E','F','G'];
 const BADGES  = ['badge-a','badge-b','badge-c','badge-d','badge-e','badge-f','badge-g'];
 const API     = '/api/game';
 const POLL_MS = 1000;
-const DRAW_TOTAL_MS = 45000; // サーバー DRAW_TIMEOUT と一致
+const LS_KEY  = 'srt_session';
 
 // ===== State =====
 let myPlayerId = null;
@@ -21,6 +21,7 @@ let clockOffset  = 0;      // serverNow - clientNow
 let timerDeadline = null;
 let timerTotalMs = 0;
 let timerTicker  = null;
+let revealTimers = [];     // reveal 演出の setTimeout id 群
 
 // ===== Helpers =====
 const $ = s => document.querySelector(s);
@@ -34,6 +35,29 @@ function showScreen(id) {
   $$('.screen').forEach(s => s.classList.remove('active'));
   const el = $(`#screen-${id}`);
   if (el) { el.classList.add('active'); window.scrollTo(0,0); }
+}
+function clearRevealTimers() { revealTimers.forEach(clearTimeout); revealTimers = []; }
+
+// ===== Session persistence (リロード復帰) =====
+function saveSession() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ roomCode, myPlayerId })); } catch (e) {}
+}
+function clearSession() {
+  try { localStorage.removeItem(LS_KEY); } catch (e) {}
+}
+async function tryRestore() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) {}
+  if (!s || !s.roomCode || !s.myPlayerId) return;
+  roomCode = s.roomCode; myPlayerId = s.myPlayerId;
+  try {
+    const v = await apiGet({ code: roomCode, playerId: myPlayerId });
+    if (!v.players || !v.players.some(p => p.id === myPlayerId)) throw new Error('not in room');
+    renderView(v);
+    startPolling();
+  } catch (e) {
+    roomCode = null; myPlayerId = null; clearSession();
+  }
 }
 
 // ===== API =====
@@ -63,6 +87,8 @@ function startPolling() {
 }
 function stopPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  if (timerTicker) { clearInterval(timerTicker); timerTicker = null; }
+  clearRevealTimers();
 }
 async function poll() {
   if (!roomCode || !myPlayerId) return;
@@ -79,7 +105,7 @@ function updateTimer(v) {
   const timed = v.deadline && ['draw','answer','reveal'].includes(v.phase);
   if (timed) {
     timerDeadline = v.deadline;
-    timerTotalMs = v.phase === 'draw' ? DRAW_TOTAL_MS
+    timerTotalMs = v.phase === 'draw' ? (v.drawSeconds || 45) * 1000
       : v.phase === 'answer' ? (v.answerSeconds || 120) * 1000
       : (v.revealSeconds || 60) * 1000;
     $('#global-timer').style.display = 'block';
@@ -105,6 +131,7 @@ function tickTimer() {
 $$('.btn-back').forEach(b => b.addEventListener('click', () => {
   stopPolling();
   myPlayerId = null; roomCode = null;
+  clearSession();
   updateTimer({});
   showScreen(b.dataset.to);
 }));
@@ -112,6 +139,7 @@ $('#btn-go-create').addEventListener('click', () => showScreen('create'));
 $('#btn-go-join').addEventListener('click', () => showScreen('join'));
 $('#btn-back-title').addEventListener('click', () => {
   stopPolling(); myPlayerId = null; roomCode = null;
+  clearSession();
   updateTimer({});
   showScreen('title');
 });
@@ -129,6 +157,7 @@ $('#btn-create-room').addEventListener('click', async () => {
     const data = await apiPost({ action: 'create', name, rounds, answerSeconds, revealSeconds });
     myPlayerId = data.playerId;
     roomCode = data.code;
+    saveSession();
     showScreen('lobby');
     startPolling();
     $('#create-status').textContent = '';
@@ -150,6 +179,7 @@ $('#btn-join-room').addEventListener('click', async () => {
     const data = await apiPost({ action: 'join', code, name });
     myPlayerId = data.playerId;
     roomCode = code;
+    saveSession();
     showScreen('lobby');
     startPolling();
     $('#join-status').textContent = '';
@@ -181,6 +211,7 @@ $('#btn-back-lobby').addEventListener('click', () => sendAction('back_to_lobby')
 function renderView(v) {
   clockOffset = (typeof v.now === 'number') ? v.now - Date.now() : 0;
   updateTimer(v);
+  if (lastPhase === 'reveal' && v.phase !== 'reveal') clearRevealTimers();
   switch (v.phase) {
     case 'lobby':   showScreen('lobby'); renderLobby(v);  break;
     case 'draw':    renderDraw(v);                        break;
@@ -374,7 +405,10 @@ function renderReveal(v) {
 }
 
 function playReveal(v) {
+  clearRevealTimers();
   const odai = v.odai || {};
+  // お題文（何のお題だったか感想時に振り返れるよう表示）
+  $('#reveal-question').textContent = odai.q || '';
   // 親の答え（最初は隠す）
   const box = $('#reveal-oya-answer');
   box.style.display = 'none';
@@ -409,8 +443,8 @@ function playReveal(v) {
   st.innerHTML = '';
 
   // 段階演出: 予想公開 → 親の答え → 役/点を一斉
-  setTimeout(() => { box.style.display = ''; box.classList.add('pop'); }, 1400);
-  setTimeout(() => {
+  revealTimers.push(setTimeout(() => { box.style.display = ''; box.classList.add('pop'); }, 1400));
+  revealTimers.push(setTimeout(() => {
     $$('#reveal-scores .result-row').forEach(row => {
       row.classList.remove('pending-reveal');
       if (row.dataset.cls) row.classList.add(row.dataset.cls);
@@ -419,7 +453,7 @@ function playReveal(v) {
     const sorted = [...v.players].sort((a,b) => b.score - a.score);
     st.innerHTML = `<div class="standings-title">現在の順位</div>` +
       sorted.map(p => `<div class="standings-row"><span class="s-name">${esc(p.name)}</span><span class="s-score">${p.score}pt</span></div>`).join('');
-  }, 2800);
+  }, 2800));
 }
 
 function updateReadyUI(v) {
@@ -455,3 +489,6 @@ function renderFinal(v) {
   $('#btn-play-again').style.display = v.isHost ? '' : 'none';
   $('#btn-back-lobby').style.display = v.isHost ? '' : 'none';
 }
+
+// ===== Boot: 直近セッションがあれば復帰 =====
+tryRestore();

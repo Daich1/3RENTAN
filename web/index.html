@@ -8,8 +8,21 @@
 </head>
 <body>
 
-<!-- 音のオン・オフ（BGM・効果音の両方） -->
-<button id="btn-sound" class="sound-toggle" type="button" aria-label="音のオン・オフ">🔊</button>
+<!-- 音量パネル（BGM・効果音は別々に調整できる） -->
+<button id="btn-sound" class="sound-toggle" type="button" aria-label="音の設定" aria-expanded="false">🔊</button>
+<div id="sound-panel" class="sound-panel" hidden>
+  <label class="sound-row">
+    <span class="sound-label">BGM</span>
+    <input id="vol-bgm" class="vol-range" type="range" min="0" max="100" step="5" value="80">
+    <span id="vol-bgm-num" class="sound-num">80</span>
+  </label>
+  <label class="sound-row">
+    <span class="sound-label">効果音</span>
+    <input id="vol-sfx" class="vol-range" type="range" min="0" max="100" step="5" value="100">
+    <span id="vol-sfx-num" class="sound-num">100</span>
+  </label>
+  <button id="btn-mute" class="sound-mute" type="button">ミュート</button>
+</div>
 
 <!-- 共通カウントダウン -->
 <div id="global-timer" class="global-timer">

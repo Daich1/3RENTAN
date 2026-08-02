@@ -537,6 +537,31 @@ input,button,select{font-family:inherit}
   backdrop-filter:blur(6px);transition:opacity .15s,border-color .15s;
 }
 .sound-toggle.off{opacity:.5;border-color:rgba(255,255,255,.12)}
+.sound-toggle.open{border-color:var(--accent);background:rgba(229,57,53,.28)}
+
+.sound-panel{
+  position:fixed;z-index:121;
+  top:calc(46px + env(safe-area-inset-top));right:9px;width:212px;
+  padding:12px 13px 11px;border-radius:12px;
+  border:1.5px solid rgba(255,255,255,.18);background:rgba(9,11,24,.94);
+  box-shadow:0 14px 30px rgba(0,0,0,.5);backdrop-filter:blur(8px);
+  animation:sr-pop .18s both;
+}
+.sound-panel[hidden]{display:none}
+.sound-row{display:flex;align-items:center;gap:8px;margin-bottom:9px;cursor:pointer}
+.sound-label{width:44px;flex:none;font-size:11px;font-weight:800;letter-spacing:.06em;color:#c9cee6}
+.sound-num{width:26px;flex:none;text-align:right;font-size:11px;font-weight:800;color:#8b93b8;
+  font-variant-numeric:tabular-nums}
+.vol-range{
+  flex:1;min-width:0;height:22px;margin:0;background:none;cursor:pointer;
+  accent-color:var(--accent);
+}
+.sound-mute{
+  display:block;width:100%;min-height:34px;margin-top:2px;
+  border:1.5px solid rgba(255,255,255,.22);border-radius:8px;background:transparent;
+  color:#c9cee6;font-size:12px;font-weight:800;letter-spacing:.08em;cursor:pointer;
+}
+.sound-mute.on{border-color:var(--accent);color:#fff;background:rgba(229,57,53,.3)}
 
 .global-timer{
   position:fixed;top:0;left:0;right:0;z-index:100;display:none;

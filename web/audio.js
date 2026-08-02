@@ -3,18 +3,32 @@
 // 追加のダウンロードもライセンス管理も要らず、初回タップの瞬間から鳴る。
 
 const SOUND_KEY = 'srt_sound';
+const VOL_KEY = 'srt_vol';
 const AC = window.AudioContext || window.webkitAudioContext;
 
 let actx = null, master = null, sfxBus = null, bgmBus = null, noiseBuf = null;
 let soundOn = true;
 try { soundOn = localStorage.getItem(SOUND_KEY) !== 'off'; } catch (e) {}
 
+// BGM と効果音は別々に上げ下げできる（0〜1）。BGMだけ切りたい人が多いので分けた
+const clamp01 = n => Math.max(0, Math.min(1, Number(n) || 0));
+let vols = { bgm: 0.8, sfx: 1 };
+try {
+  const s = JSON.parse(localStorage.getItem(VOL_KEY) || 'null');
+  if (s) vols = { bgm: clamp01(s.bgm), sfx: clamp01(s.sfx) };
+} catch (e) {}
+function saveVols() {
+  try { localStorage.setItem(VOL_KEY, JSON.stringify(vols)); } catch (e) {}
+}
+// 今のムードで狙うBGMバスの音量
+const bgmTarget = () => (curMood ? MOODS[curMood].vol : 0) * vols.bgm;
+
 function initAudio() {
   if (actx || !AC) return actx;
   actx = new AC();
   master = actx.createGain(); master.gain.value = soundOn ? 0.9 : 0.0001;
   master.connect(actx.destination);
-  sfxBus = actx.createGain(); sfxBus.gain.value = 1; sfxBus.connect(master);
+  sfxBus = actx.createGain(); sfxBus.gain.value = vols.sfx; sfxBus.connect(master);
   bgmBus = actx.createGain(); bgmBus.gain.value = 0.0001; bgmBus.connect(master);
   // ホワイトノイズは1秒ぶんを使い回す（めくり音・ハイハットの素）
   noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
@@ -82,7 +96,7 @@ function noise(o) {
 // ファンファーレの裏で BGM を一時的に下げる
 function duck(secs) {
   if (!bgmBus || !curMood || !ready()) return;
-  const t = now(), v = MOODS[curMood].vol;
+  const t = now(), v = bgmTarget();
   bgmBus.gain.cancelScheduledValues(t);
   bgmBus.gain.setValueAtTime(v * 0.3, t);
   bgmBus.gain.linearRampToValueAtTime(v, t + secs);
@@ -204,7 +218,7 @@ function bgmBeat(m, i, t) {
 }
 
 function bgmTick() {
-  if (!curMood || !ready()) return;
+  if (!curMood || !ready() || vols.bgm <= 0) return;   // 0 の時は組み立て自体を省く
   const m = MOODS[curMood];
   const stepDur = 30 / m.bpm;               // 8分音符の長さ
   if (bgmTime < now()) bgmTime = now() + 0.02;  // 復帰直後に過去ぶんを詰め込まない
@@ -224,7 +238,7 @@ function syncBgm() {
   const t = now();
   bgmBus.gain.cancelScheduledValues(t);
   bgmBus.gain.setValueAtTime(0.0001, t);
-  bgmBus.gain.linearRampToValueAtTime(MOODS[curMood].vol, t + 0.8);
+  bgmBus.gain.linearRampToValueAtTime(bgmTarget(), t + 0.8);
   if (!bgmTimer) bgmTimer = setInterval(bgmTick, 40);
 }
 function stopBgm() {
@@ -244,6 +258,16 @@ const Sound = {
   // mood: 'lobby' | 'answer' | 'reveal' | null（null で停止）
   bgm(mood) { wantMood = mood || null; syncBgm(); },
   isOn: () => soundOn,
+  getVol: () => ({ bgm: vols.bgm, sfx: vols.sfx }),
+  // kind: 'bgm' | 'sfx'、val: 0〜1。スライダー操作中に呼ばれるので滑らかに追従させる
+  setVol(kind, val) {
+    if (kind !== 'bgm' && kind !== 'sfx') return;
+    vols[kind] = clamp01(val);
+    saveVols();
+    if (!actx) return;
+    if (kind === 'sfx') sfxBus.gain.setTargetAtTime(vols.sfx, now(), 0.02);
+    else bgmBus.gain.setTargetAtTime(bgmTarget(), now(), 0.05);
+  },
   toggle() {
     soundOn = !soundOn;
     try { localStorage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); } catch (e) {}

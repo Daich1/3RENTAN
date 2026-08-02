@@ -59,21 +59,53 @@ function bgmForPhase(phase) {
     : 'lobby'
   );
 }
-// ボタンの共通タップ音。専用音がある選択肢・順位カードと音トグル自身は除く
+// ボタンの共通タップ音。専用音がある選択肢・順位カードと、音量パネル自身は除く
 document.addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b || b.disabled || b.id === 'btn-sound') return;
-  if (b.closest('#select-choices') || b.closest('#reveal-cards')) return;
+  if (b.closest('#select-choices') || b.closest('#reveal-cards') || b.closest('#sound-panel')) return;
   Sound.play(b.classList.contains('btn-link') || b.classList.contains('btn-back') ? 'back' : 'tap');
 });
-const soundBtn = $('#btn-sound');
-function paintSoundBtn() {
+
+// ===== 音量パネル =====
+const soundBtn = $('#btn-sound'), soundPanel = $('#sound-panel');
+const volBgm = $('#vol-bgm'), volSfx = $('#vol-sfx'), muteBtn = $('#btn-mute');
+
+function paintSoundUI() {
   const on = Sound.isOn();
-  soundBtn.textContent = on ? '🔊' : '🔇';
+  const v = Sound.getVol();
+  soundBtn.textContent = on && (v.bgm > 0 || v.sfx > 0) ? '🔊' : '🔇';
   soundBtn.classList.toggle('off', !on);
+  muteBtn.classList.toggle('on', !on);
+  setText(muteBtn, on ? 'ミュート' : 'ミュート解除');
+  setText($('#vol-bgm-num'), String(Math.round(v.bgm * 100)));
+  setText($('#vol-sfx-num'), String(Math.round(v.sfx * 100)));
 }
-soundBtn.addEventListener('click', () => { Sound.toggle(); paintSoundBtn(); });
-paintSoundBtn();
+function openSoundPanel(open) {
+  soundPanel.hidden = !open;
+  soundBtn.classList.toggle('open', open);
+  soundBtn.setAttribute('aria-expanded', String(open));
+}
+soundBtn.addEventListener('click', () => openSoundPanel(soundPanel.hidden));
+// パネル外をタップしたら閉じる（ボタン自身のクリックはトグル側で処理済み）
+document.addEventListener('click', e => {
+  if (soundPanel.hidden) return;
+  if (e.target.closest('#sound-panel') || e.target.closest('#btn-sound')) return;
+  openSoundPanel(false);
+});
+muteBtn.addEventListener('click', () => { Sound.toggle(); paintSoundUI(); });
+[[volBgm, 'bgm'], [volSfx, 'sfx']].forEach(([el, kind]) => {
+  el.addEventListener('input', () => {
+    if (!Sound.isOn()) Sound.toggle();   // 音量を触った＝鳴らしたい
+    Sound.setVol(kind, el.value / 100);
+    paintSoundUI();
+  });
+  // 離した時だけ試聴音を鳴らす（ドラッグ中に鳴らすと音が詰まる）
+  el.addEventListener('change', () => { if (kind === 'sfx') Sound.play('pick', 1); });
+});
+volBgm.value = Math.round(Sound.getVol().bgm * 100);
+volSfx.value = Math.round(Sound.getVol().sfx * 100);
+paintSoundUI();
 
 // ===== Session persistence (リロード復帰) =====
 function saveSession() {

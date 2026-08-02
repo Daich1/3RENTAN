@@ -375,32 +375,30 @@ input,button,select{font-family:inherit}
   padding:10px;border-radius:12px;background:var(--ink);color:#fff;
   font-size:15px;font-weight:800;line-height:1.35;
 }
-/* 順位カード3枚 ＋ 役の早見表を横1列に並べる */
-.cards-row{display:flex;gap:8px;align-items:stretch;margin-top:14px}
-.cards-row .flip-cards{flex:1;min-width:0;margin-top:0}
-.yaku-card{
-  flex:0 0 86px;display:flex;flex-direction:column;justify-content:space-between;gap:3px;
-  /* 順位カードは下にヒント行(6+14px)を持つので、その分を差し引いて下端を揃える */
-  margin-bottom:20px;padding:7px 6px;
-  border-radius:12px;border:1.5px solid var(--ink);background:#fff;
-  box-shadow:0 10px 22px rgba(0,0,0,.3);
+/* 発表画面: 幅があれば本体の右に役カードを並べ、無ければ下に落とす */
+.reveal-layout{display:flex;flex-direction:column;gap:14px}
+.yaku-h{margin-top:12px!important}
+.yaku-item{padding:8px 10px;margin-bottom:7px;border-radius:9px;border:1.5px solid transparent}
+.yaku-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.yaku-line b{font-size:14px;font-weight:800;color:var(--ink);letter-spacing:.02em}
+.yaku-line i{font-size:14px;font-weight:800;font-style:normal;color:var(--ink);white-space:nowrap}
+.yaku-item p{margin-top:3px;font-size:11.5px;font-weight:700;line-height:1.5;color:var(--ink-sub)}
+.yaku-item.sanrentan{background:linear-gradient(135deg,#fff6d6,#f5c518 60%,#e0a800);border-color:#b08600}
+.yaku-item.sanrenpuku{background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-color:var(--col-f)}
+.yaku-item.nirentan{background:linear-gradient(135deg,#e3f2fd,#bbdefb);border-color:var(--col-d)}
+.yaku-item.pukupuku{background:#f2f4fa;border-color:var(--line-soft)}
+.yaku-item.tan{background:#fafbfe;border-color:var(--line-field)}
+/* 結果行と違い読ませる文章なので、ハズレも薄くしすぎない */
+.yaku-item.hazure{background:#f7f8fc;border-color:var(--line-hair)}
+.yaku-item.hazure .yaku-line b,.yaku-item.hazure .yaku-line i{color:var(--ink-mute)}
+.yaku-foot{font-size:11px;font-weight:700;line-height:1.5;color:var(--ink-mute)}
+
+@media(min-width:760px){
+  #screen-reveal .screen-inner{max-width:700px}
+  .reveal-layout{flex-direction:row;align-items:flex-start}
+  .reveal-layout > .ticket.card{flex:1;min-width:0}
+  .yaku-ticket{flex:0 0 268px;position:sticky;top:44px}
 }
-.yaku-title{
-  font-size:9px;font-weight:800;letter-spacing:.1em;text-align:center;
-  color:var(--ink-mute);padding-bottom:3px;border-bottom:1.5px dashed var(--line-soft);
-}
-.yaku-row{
-  display:flex;align-items:center;justify-content:space-between;gap:2px;
-  padding:2px 4px;border-radius:5px;border:1px solid transparent;
-}
-.yaku-row b{font-size:9px;font-weight:800;color:var(--ink);letter-spacing:-.02em;white-space:nowrap}
-.yaku-row i{font-size:10px;font-weight:800;font-style:normal;color:var(--ink)}
-.yaku-row.sanrentan{background:linear-gradient(135deg,#fff6d6,#f5c518 60%,#e0a800);border-color:#b08600}
-.yaku-row.sanrenpuku{background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-color:var(--col-f)}
-.yaku-row.nirentan{background:linear-gradient(135deg,#e3f2fd,#bbdefb);border-color:var(--col-d)}
-.yaku-row.pukupuku{background:#f2f4fa;border-color:var(--line-soft)}
-.yaku-row.tan{background:#fafbfe;border-color:var(--line-field)}
-.yaku-row.hazure{background:#f7f8fc;opacity:.55}
 
 .flip-cards{display:flex;gap:8px;margin-top:14px}
 .flip-card{
@@ -410,9 +408,7 @@ input,button,select{font-family:inherit}
 .flip-card.can-flip{cursor:pointer}
 .flip-card:disabled{opacity:1}
 .flip-inner{
-  /* 早見表のぶん札が細くなるので、比率だけだと中身（的中バッジ）がはみ出す。
-     高さの下限を決めて、狭い画面では縦に伸ばして吸収する */
-  position:relative;display:block;width:100%;aspect-ratio:5/7;min-height:134px;
+  position:relative;display:block;width:100%;aspect-ratio:5/7;
   transform-style:preserve-3d;-webkit-transform-style:preserve-3d;
   transition:transform .55s cubic-bezier(.3,1.05,.3,1);
 }
@@ -662,14 +658,7 @@ input,button,select{font-family:inherit}
 
 /* 画面が低い端末ではさらに詰める */
 @media(max-height:780px){
-  #screen-reveal .flip-inner{aspect-ratio:5/6;min-height:112px}
-  /* カードが低くなるぶん中身も詰める（的中バッジがはみ出て消えるのを防ぐ） */
-  #screen-reveal .flip-front{gap:3px;padding:6px 3px}
-  #screen-reveal .flip-badge{width:34px;height:34px;font-size:17px}
-  #screen-reveal .flip-label{font-size:11px;line-height:1.2}
-  #screen-reveal .flip-hits{font-size:9px;padding:2px 6px}
-  #screen-reveal .yaku-card{margin-bottom:20px;padding:6px 5px}
-  #screen-reveal .yaku-row{padding:1px 4px}
+  #screen-reveal .flip-inner{aspect-ratio:5/6}
   #screen-reveal .ticket-body{padding:12px 14px 14px}
   #screen-reveal .mini-question{font-size:16px}
   #screen-reveal .hype-line{min-height:38px;font-size:13px}
@@ -692,12 +681,8 @@ input,button,select{font-family:inherit}
   .rank-slot{min-height:76px}
   .choice-btn{font-size:16px;min-height:50px}
   .input-code{font-size:26px}
-  /* 狭幅では早見表を細くして、順位カードの取り分を確保する */
-  .cards-row{gap:6px}
-  .yaku-card{flex-basis:72px;padding:6px 4px}
-  .yaku-row b{font-size:8px}
-  .yaku-row i{font-size:9px}
-  .yaku-title{font-size:8px}
+  .yaku-line b,.yaku-line i{font-size:13px}
+  .yaku-item p{font-size:11px}
   /* 発表の結果行: 狭幅では予想手を隠して役・加点・累計を優先表示 */
   .result-row{gap:6px;padding:8px}
   .result-row .r-picks{display:none}

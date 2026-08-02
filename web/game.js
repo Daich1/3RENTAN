@@ -107,6 +107,59 @@ volBgm.value = Math.round(Sound.getVol().bgm * 100);
 volSfx.value = Math.round(Sound.getVol().sfx * 100);
 paintSoundUI();
 
+// ===== 招待リンク =====
+const inviteUrl = code => location.origin + location.pathname + '?room=' + code;
+// clipboard API は https / localhost でしか使えないので execCommand に落とす
+function legacyCopy(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+    document.body.appendChild(ta);
+    ta.select(); ta.setSelectionRange(0, text.length);
+    const done = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return done;
+  } catch (e) { return false; }
+}
+let copyHintTimer = null;
+async function copyInvite() {
+  if (!roomCode) return;
+  const url = inviteUrl(roomCode);
+  let ok = false;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(url);
+      ok = true;
+    }
+  } catch (e) {}
+  if (!ok) ok = legacyCopy(url);
+
+  const hint = $('#copy-hint');
+  hint.classList.toggle('done', ok);
+  hint.classList.toggle('failed', !ok);
+  setText(hint, ok ? '招待リンクをコピーしました！' : 'コピーできません。コードを伝えてください');
+  if (ok) Sound.play('pick', 2);
+  clearTimeout(copyHintTimer);
+  copyHintTimer = setTimeout(() => {
+    hint.classList.remove('done', 'failed');
+    setText(hint, 'タップで招待リンクをコピー');
+  }, 2200);
+}
+$('#btn-copy-invite').addEventListener('click', copyInvite);
+
+// ?room=ABCD で開かれたら参加画面にコードを入れて待つ
+function applyInviteParam() {
+  const raw = new URLSearchParams(location.search).get('room') || '';
+  const code = raw.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  if (code.length !== 4) return false;
+  $('#join-code').value = code;
+  showScreen('join');
+  $('#join-name').focus();
+  return true;
+}
+
 // ===== Session persistence (リロード復帰) =====
 function saveSession() {
   try { localStorage.setItem(LS_KEY, JSON.stringify({ roomCode, myPlayerId })); } catch (e) {}
@@ -117,15 +170,17 @@ function clearSession() {
 async function tryRestore() {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) {}
-  if (!s || !s.roomCode || !s.myPlayerId) return;
+  if (!s || !s.roomCode || !s.myPlayerId) return false;
   roomCode = s.roomCode; myPlayerId = s.myPlayerId;
   try {
     const v = await apiGet({ code: roomCode, playerId: myPlayerId });
     if (!v.players || !v.players.some(p => p.id === myPlayerId)) throw new Error('not in room');
     renderView(v);
     startPolling();
+    return true;
   } catch (e) {
     roomCode = null; myPlayerId = null; clearSession();
+    return false;
   }
 }
 
@@ -765,5 +820,5 @@ function renderFinal(v) {
   $('#btn-back-lobby').style.display = v.isHost ? '' : 'none';
 }
 
-// ===== Boot: 直近セッションがあれば復帰 =====
-tryRestore();
+// ===== Boot: 直近セッションがあれば復帰。無ければ招待リンクのコードを拾う =====
+tryRestore().then(restored => { if (!restored) applyInviteParam(); });

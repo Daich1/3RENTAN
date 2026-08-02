@@ -154,10 +154,12 @@
             <span id="lobby-rules" class="ticket-note"></span>
           </div>
 
-          <div class="room-code-display">
+          <!-- タップで招待URLをコピー。コード自体は長押しで選択もできる -->
+          <button id="btn-copy-invite" class="room-code-display" type="button">
             <span class="room-code-label">ルームコード</span>
             <span id="lobby-code" class="room-code-value"></span>
-          </div>
+            <span id="copy-hint" class="room-code-hint">タップで招待リンクをコピー</span>
+          </button>
 
           <div class="divider-dark"></div>
           <div class="section-head">
@@ -292,7 +294,19 @@
           <div class="divider-dark"></div>
 
           <div id="reveal-hype" class="hype-line"></div>
-          <div id="reveal-cards" class="flip-cards"></div>
+          <!-- 順位カードの横に役の早見表を1枚立てる（内容は固定なのでHTML側に置く） -->
+          <div class="cards-row">
+            <div id="reveal-cards" class="flip-cards"></div>
+            <div class="yaku-card">
+              <span class="yaku-title">役と配当</span>
+              <span class="yaku-row sanrentan"><b>サンレンタン</b><i>6</i></span>
+              <span class="yaku-row sanrenpuku"><b>サンレンプク</b><i>4</i></span>
+              <span class="yaku-row nirentan"><b>ニレンタン</b><i>3</i></span>
+              <span class="yaku-row pukupuku"><b>プクプク</b><i>2</i></span>
+              <span class="yaku-row tan"><b>タン</b><i>1</i></span>
+              <span class="yaku-row hazure"><b>ハズレ</b><i>0</i></span>
+            </div>
+          </div>
           <div id="reveal-payout" class="payout-wrap"></div>
           <div id="reveal-scores" class="result-list"></div>
 

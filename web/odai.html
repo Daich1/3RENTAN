@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>お題管理 - SANRENTAN</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* 管理画面専用。ゲーム本体からは参照されないのでここに閉じ込める */
+.admin{max-width:760px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) 14px 60px}
+.admin-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.admin-head h1{font-size:22px;font-weight:800;letter-spacing:.06em;color:#fff}
+.admin-meta{font-size:12px;font-weight:800;color:var(--dim)}
+.admin-note{
+  margin-bottom:14px;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:700;line-height:1.6;
+  border:1.5px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#c9cee6;
+}
+.admin-note.warn{border-color:#e0a800;background:rgba(224,168,0,.14);color:#ffe6a3}
+.admin-note.alert{border-color:var(--accent);background:rgba(229,57,53,.16);color:#ffc9c7}
+.admin-note:empty{display:none}
+
+.admin-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:var(--card-shadow)}
+.admin-card h2{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:10px}
+.opt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.opt-field{display:flex;align-items:center;gap:6px}
+.opt-field .opt-badge{flex:none;width:26px;height:26px;font-size:13px}
+.opt-field input{flex:1;min-width:0;padding:8px 10px;font-size:14px}
+.form-row{display:flex;gap:8px;margin-top:12px}
+.form-row .btn-primary,.form-row .btn-secondary{min-height:44px;font-size:15px}
+.form-msg{margin-top:8px;font-size:12px;font-weight:800;min-height:16px;color:var(--accent)}
+.form-msg.ok{color:var(--col-f)}
+
+.tools{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.tools input{flex:1;min-width:160px;padding:10px 12px;font-size:14px}
+.tools .count{font-size:12px;font-weight:800;color:var(--dim)}
+
+.odai-row{
+  background:#fff;border-radius:12px;padding:11px 13px;margin-bottom:8px;
+  border:1.5px solid transparent;
+}
+.odai-row.editing{border-color:var(--accent);box-shadow:0 0 0 3px rgba(229,57,53,.22)}
+.odai-top{display:flex;align-items:baseline;gap:8px}
+.odai-id{font-size:10px;font-weight:800;color:var(--ink-mute);font-variant-numeric:tabular-nums;flex:none}
+.odai-q{flex:1;min-width:0;font-size:15px;font-weight:800;color:var(--ink);line-height:1.35}
+.odai-acts{display:flex;gap:6px;flex:none}
+.odai-acts button{
+  min-height:30px;padding:0 10px;border-radius:7px;border:1.5px solid var(--line-soft);
+  background:#fff;color:var(--ink-sub);font-size:12px;font-weight:800;cursor:pointer;
+}
+.odai-acts button:active{border-color:var(--ink);color:var(--ink)}
+.odai-acts .danger{color:var(--accent);border-color:#f2c4c3}
+.odai-opts{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.odai-opt{
+  display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 3px;
+  border-radius:999px;background:#f4f6fb;font-size:12px;font-weight:700;color:var(--ink);
+}
+.odai-opt .opt-badge{width:19px;height:19px;font-size:10px}
+.empty-note{padding:24px 12px;text-align:center;font-size:13px;font-weight:800;color:var(--dim)}
+@media(max-width:520px){
+  .opt-grid{grid-template-columns:1fr}
+  .admin-card{padding:13px}
+}
+</style>
+</head>
+<body>
+
+<div class="admin">
+  <div class="admin-head">
+    <h1>お題管理</h1>
+    <span id="meta" class="admin-meta">読み込み中…</span>
+  </div>
+  <div id="storage-note" class="admin-note"></div>
+
+  <!-- 追加 / 編集フォーム -->
+  <div class="admin-card">
+    <h2 id="form-title">お題を追加</h2>
+    <input id="f-q" type="text" class="input-field" maxlength="40" placeholder="例）焼肉で最初に頼むメニュー">
+    <div class="opt-grid" id="opt-grid" style="margin-top:10px"></div>
+    <div class="form-row">
+      <button id="btn-save" class="btn-primary">追加する</button>
+      <button id="btn-cancel" class="btn-secondary" style="display:none">キャンセル</button>
+    </div>
+    <p id="form-msg" class="form-msg"></p>
+  </div>
+
+  <div class="tools">
+    <input id="search" type="search" class="input-field" placeholder="お題・選択肢で絞り込み">
+    <span id="count" class="count"></span>
+    <button id="btn-reset" class="btn-secondary" style="width:auto;padding:0 12px;min-height:38px">組み込みに戻す</button>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<script src="odai-admin.js"></script>
+</body>
+</html>

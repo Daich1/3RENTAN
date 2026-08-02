@@ -103,6 +103,15 @@
             </label>
           </div>
 
+          <label class="field">
+            <span class="field-label">お題リストのコード（任意）</span>
+            <input id="create-deck" type="text" placeholder="空欄なら通常のお題" maxlength="6"
+                   class="input-field input-deck" autocapitalize="characters" autocomplete="off" spellcheck="false">
+            <span class="field-hint">
+              <a href="/deck.html" target="_blank" rel="noopener">お題リストを作る / 編集する</a>
+            </span>
+          </label>
+
           <div class="divider-dark"></div>
           <button id="btn-create-room" class="btn-primary">この設定でルームを作る</button>
           <button class="btn-link btn-back" data-to="title">タイトルに戻る</button>
@@ -153,6 +162,7 @@
             <span class="ticket-label">WAITING ROOM</span>
             <span id="lobby-rules" class="ticket-note"></span>
           </div>
+          <p id="lobby-deck" class="lobby-deck"></p>
 
           <!-- タップで招待URLをコピー。コード自体は長押しで選択もできる -->
           <button id="btn-copy-invite" class="room-code-display" type="button">

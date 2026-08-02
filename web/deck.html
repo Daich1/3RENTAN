@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>お題リストを作る - SANRENTAN</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* デッキ作成画面。ゲーム本体とは独立したページ */
+.deck{max-width:760px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) 14px 70px}
+.deck-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.deck-head h1{font-size:22px;font-weight:800;letter-spacing:.06em;color:#fff}
+.deck-head a{font-size:12px;font-weight:800;color:var(--sky);text-decoration:underline}
+.deck-lead{font-size:12px;font-weight:700;line-height:1.7;color:#a7aecd;margin-bottom:14px}
+
+.dk-panel{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:var(--card-shadow)}
+.dk-panel h2{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:4px}
+.dk-panel .sub{font-size:11.5px;font-weight:700;color:var(--ink-mute);line-height:1.6;margin-bottom:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row input{flex:1;min-width:140px}
+.row button{flex:none;width:auto;padding:0 14px;min-height:46px}
+
+/* 保存後のコード表示 */
+.code-out{margin-top:12px;padding:12px;border-radius:12px;border:1.5px dashed var(--line-soft);text-align:center;display:none}
+.code-out.on{display:block}
+.code-out .label{display:block;font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--ink-sub)}
+.code-out .val{
+  display:block;margin:4px 0 2px;font-size:34px;font-weight:800;letter-spacing:.18em;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink);user-select:text;
+}
+.code-out .hint{display:block;font-size:11px;font-weight:800;color:var(--ink-mute)}
+.code-out .hint.done{color:var(--col-f)}
+
+.opt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+.opt-field{display:flex;align-items:center;gap:6px}
+.opt-field .opt-badge{flex:none;width:26px;height:26px;font-size:13px}
+.opt-field input{flex:1;min-width:0;padding:8px 10px;font-size:14px}
+.form-msg{margin-top:8px;font-size:12px;font-weight:800;min-height:16px;color:var(--accent)}
+.form-msg.ok{color:var(--col-f)}
+
+.pick-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.pick-tools input{flex:1;min-width:150px;padding:9px 11px;font-size:14px}
+.pick-tools button{flex:none;width:auto;padding:0 10px;min-height:36px;font-size:12px}
+.pick-list{max-height:340px;overflow-y:auto;border:1.5px solid var(--line-field);border-radius:10px;padding:6px}
+.pick{display:flex;gap:9px;align-items:flex-start;padding:8px;border-radius:8px;cursor:pointer}
+.pick:hover{background:#f7f8fc}
+.pick input{margin-top:3px;width:17px;height:17px;flex:none;accent-color:var(--accent)}
+.pick-body{min-width:0}
+.pick-q{font-size:14px;font-weight:800;color:var(--ink);line-height:1.35}
+.pick-o{margin-top:3px;font-size:11px;font-weight:700;color:var(--ink-mute);line-height:1.5}
+
+.mine{margin-top:4px}
+.mine-row{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border-radius:9px;background:#f7f8fc;margin-bottom:6px}
+.mine-body{flex:1;min-width:0}
+.mine-q{font-size:14px;font-weight:800;color:var(--ink)}
+.mine-o{margin-top:2px;font-size:11px;font-weight:700;color:var(--ink-mute);line-height:1.5}
+.mine-acts{display:flex;gap:6px;flex:none}
+.mine-acts button{
+  min-height:28px;padding:0 9px;border-radius:7px;border:1.5px solid var(--line-soft);
+  background:#fff;color:var(--ink-sub);font-size:11px;font-weight:800;cursor:pointer;width:auto;
+}
+.mine-acts .danger{color:var(--accent);border-color:#f2c4c3}
+.empty-note{padding:14px;text-align:center;font-size:12px;font-weight:800;color:var(--ink-mute)}
+
+.save-bar{
+  position:sticky;bottom:0;margin-top:16px;padding:10px 0 calc(12px + env(safe-area-inset-bottom));
+  /* 下のパネルに重なるので、背景は透けさせずぼかしで境目を柔らかくする */
+  background:var(--bg);box-shadow:0 -10px 18px 8px var(--bg);
+}
+.save-count{text-align:center;font-size:12px;font-weight:800;color:#a7aecd;margin-bottom:8px}
+@media(max-width:520px){.opt-grid{grid-template-columns:1fr}.dk-panel{padding:13px}}
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <div class="deck-head">
+    <h1>お題リストを作る</h1>
+    <a href="/">ゲームに戻る</a>
+  </div>
+  <p class="deck-lead">
+    使いたいお題を選んで保存すると、6文字のコードが出ます。
+    ルーム作成画面でそのコードを入れると、そのルームだけこのリストで遊べます。
+    コードを教えれば他の人も同じリストを使えます。
+  </p>
+
+  <!-- 既存リストの読み込み -->
+  <div class="dk-panel">
+    <h2>リストの情報</h2>
+    <p class="sub">コードを持っている場合は読み込むと、その内容から編集できます（保存すると同じコードのまま更新されます）。</p>
+    <div class="row" style="margin-bottom:8px">
+      <input id="load-code" type="text" class="input-field" maxlength="6" placeholder="コードを読み込む"
+             autocapitalize="characters" autocomplete="off" spellcheck="false">
+      <button id="btn-load" class="btn-secondary">読み込む</button>
+    </div>
+    <input id="deck-name" type="text" class="input-field" maxlength="20" placeholder="リスト名（例: 身内ネタ多め）">
+    <div id="code-out" class="code-out">
+      <span class="label">このリストのコード</span>
+      <span id="code-val" class="val"></span>
+      <span id="code-hint" class="hint">タップでコピー</span>
+    </div>
+    <p id="load-msg" class="form-msg"></p>
+  </div>
+
+  <!-- 自作お題 -->
+  <div class="dk-panel">
+    <h2>自分で作ったお題</h2>
+    <p class="sub">選択肢は3〜7個。空欄は詰められます。</p>
+    <div id="mine" class="mine"></div>
+    <div style="margin-top:10px">
+      <input id="f-q" type="text" class="input-field" maxlength="40" placeholder="お題（例: 深夜に食べたいもの）">
+      <div class="opt-grid" id="opt-grid"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="btn-add" class="btn-primary" style="flex:1">このお題を追加</button>
+        <button id="btn-add-cancel" class="btn-secondary" style="display:none">キャンセル</button>
+      </div>
+      <p id="form-msg" class="form-msg"></p>
+    </div>
+  </div>
+
+  <!-- 既定リストから選ぶ -->
+  <div class="dk-panel">
+    <h2>用意されているお題から選ぶ</h2>
+    <div class="pick-tools">
+      <input id="search" type="search" class="input-field" placeholder="絞り込み">
+      <button id="btn-all" class="btn-secondary">表示中を全選択</button>
+      <button id="btn-none" class="btn-secondary">全解除</button>
+    </div>
+    <div id="picks" class="pick-list"></div>
+  </div>
+
+  <div class="save-bar">
+    <div id="save-count" class="save-count"></div>
+    <button id="btn-save" class="btn-primary">このリストを保存する</button>
+  </div>
+</div>
+
+<script src="deck.js"></script>
+</body>
+</html>

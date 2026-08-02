@@ -290,7 +290,8 @@ $('#btn-create-room').addEventListener('click', async () => {
     const rounds = parseInt($('#create-rounds').value) || 5;
     const answerSeconds = parseInt($('#create-answer-sec').value) || 120;
     const revealSeconds = parseInt($('#create-reveal-sec').value) || 60;
-    const data = await apiPost({ action: 'create', name, rounds, answerSeconds, revealSeconds });
+    const deckCode = $('#create-deck').value.trim().toUpperCase();
+    const data = await apiPost({ action: 'create', name, rounds, answerSeconds, revealSeconds, deckCode });
     myPlayerId = data.playerId;
     roomCode = data.code;
     saveSession();
@@ -368,6 +369,10 @@ function renderView(v) {
 function renderLobby(v) {
   setText($('#lobby-code'), v.roomCode);
   setText($('#lobby-rules'), `回答 ${v.answerSeconds}秒 / 発表 ${v.revealSeconds}秒 ・ 全${v.totalRounds}R`);
+  // どのお題リストで遊ぶか。共通リストの時は出さない
+  setText($('#lobby-deck'), v.deckName
+    ? `お題リスト「${v.deckName}」（${v.deckCode} ・ ${v.odaiCount}件）`
+    : '');
   // 顔ぶれが変わった時だけ組み直す。毎ポーリングで作り直すと
   // 入場アニメが再生され続けて名前が点滅し、コピーもできない
   const c = $('#lobby-players');

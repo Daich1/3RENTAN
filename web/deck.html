@@ -30,6 +30,8 @@
 }
 .code-out .hint{display:block;font-size:11px;font-weight:800;color:var(--ink-mute)}
 .code-out .hint.done{color:var(--col-f)}
+/* ボタン見た目のリンク。同じタブで遷移する */
+.link-btn{margin-top:8px;display:flex;align-items:center;justify-content:center;text-decoration:none}
 
 .opt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
 .opt-field{display:flex;align-items:center;gap:6px}
@@ -42,12 +44,21 @@
 .pick-tools input{flex:1;min-width:150px;padding:9px 11px;font-size:14px}
 .pick-tools button{flex:none;width:auto;padding:0 10px;min-height:36px;font-size:12px}
 .pick-list{max-height:340px;overflow-y:auto;border:1.5px solid var(--line-field);border-radius:10px;padding:6px}
-.pick{display:flex;gap:9px;align-items:flex-start;padding:8px;border-radius:8px;cursor:pointer}
-.pick:hover{background:#f7f8fc}
-.pick input{margin-top:3px;width:17px;height:17px;flex:none;accent-color:var(--accent)}
-.pick-body{min-width:0}
+.pick{display:flex;gap:9px;align-items:flex-start;padding:8px;border-radius:8px}
+.pick + .pick{border-top:1px solid var(--line-hair)}
+.pick-body{flex:1;min-width:0}
 .pick-q{font-size:14px;font-weight:800;color:var(--ink);line-height:1.35}
 .pick-o{margin-top:3px;font-size:11px;font-weight:700;color:var(--ink-mute);line-height:1.5}
+.pick-btn{
+  flex:none;width:auto;min-height:28px;padding:0 10px;border-radius:7px;
+  border:1.5px solid #f2c4c3;background:#fff;color:var(--accent);
+  font-size:11px;font-weight:800;cursor:pointer;
+}
+/* 外したお題は消さずに残す。戻せると分かるようにしておく */
+.pick.off{background:#f4f6fb}
+.pick.off .pick-q{color:var(--ink-mute);text-decoration:line-through}
+.pick.off .pick-o{opacity:.55}
+.pick.off .pick-btn{border-color:var(--line-soft);color:var(--ink-sub)}
 
 .mine{margin-top:4px}
 .mine-row{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border-radius:9px;background:#f7f8fc;margin-bottom:6px}
@@ -79,8 +90,8 @@
     <a href="/">ゲームに戻る</a>
   </div>
   <p class="deck-lead">
-    使いたいお題を選んで保存すると、6文字のコードが出ます。
-    ルーム作成画面でそのコードを入れると、そのルームだけこのリストで遊べます。
+    最初から用意されているお題が全部入った状態です。使わないものを外し、自分のお題を足して保存すると、
+    6文字のコードが出ます。ルーム作成画面でそのコードを入れると、そのルームだけこのリストで遊べます。
     コードを教えれば他の人も同じリストを使えます。
   </p>
 
@@ -99,6 +110,7 @@
       <span id="code-val" class="val"></span>
       <span id="code-hint" class="hint">タップでコピー</span>
     </div>
+    <a id="btn-use" class="btn-secondary link-btn" href="/" style="display:none">このリストでルームを作る</a>
     <p id="load-msg" class="form-msg"></p>
   </div>
 
@@ -118,13 +130,14 @@
     </div>
   </div>
 
-  <!-- 既定リストから選ぶ -->
+  <!-- 既定リストから要らないものを外す -->
   <div class="dk-panel">
-    <h2>用意されているお題から選ぶ</h2>
+    <h2>用意されているお題</h2>
+    <p class="sub">最初は全部入っています。使わないものを「外す」で除いてください。</p>
     <div class="pick-tools">
       <input id="search" type="search" class="input-field" placeholder="絞り込み">
-      <button id="btn-all" class="btn-secondary">表示中を全選択</button>
-      <button id="btn-none" class="btn-secondary">全解除</button>
+      <button id="btn-none" class="btn-secondary">表示中をまとめて外す</button>
+      <button id="btn-all" class="btn-secondary">すべて戻す</button>
     </div>
     <div id="picks" class="pick-list"></div>
   </div>

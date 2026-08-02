@@ -149,15 +149,24 @@ async function copyInvite() {
 }
 $('#btn-copy-invite').addEventListener('click', copyInvite);
 
-// ?room=ABCD で開かれたら参加画面にコードを入れて待つ
-function applyInviteParam() {
-  const raw = new URLSearchParams(location.search).get('room') || '';
-  const code = raw.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
-  if (code.length !== 4) return false;
-  $('#join-code').value = code;
-  showScreen('join');
-  $('#join-name').focus();
-  return true;
+// URLで渡されたコードを拾う。?room= は参加画面、?deck= はルーム作成画面へ
+function applyEntryParams() {
+  const p = new URLSearchParams(location.search);
+  const room = (p.get('room') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  if (room.length === 4) {
+    $('#join-code').value = room;
+    showScreen('join');
+    $('#join-name').focus();
+    return true;
+  }
+  const deck = (p.get('deck') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  if (deck.length === 6) {
+    $('#create-deck').value = deck;
+    showScreen('create');
+    $('#create-name').focus();
+    return true;
+  }
+  return false;
 }
 
 // ===== Session persistence (リロード復帰) =====
@@ -825,5 +834,5 @@ function renderFinal(v) {
   $('#btn-back-lobby').style.display = v.isHost ? '' : 'none';
 }
 
-// ===== Boot: 直近セッションがあれば復帰。無ければ招待リンクのコードを拾う =====
-tryRestore().then(restored => { if (!restored) applyInviteParam(); });
+// ===== Boot: 直近セッションがあれば復帰。無ければURLのコードを拾う =====
+tryRestore().then(restored => { if (!restored) applyEntryParams(); });

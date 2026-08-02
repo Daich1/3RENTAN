@@ -1,5 +1,6 @@
 // ===== お題リスト（デッキ）作成画面 =====
-// 既定リストからの選択 ＋ 自作お題 を1つのリストにまとめ、6文字のコードで共有する。
+// 既定リスト（初期は全部入り。要らないものを外す）＋ 自作お題 を1つにまとめ、
+// 6文字のコードで共有する。
 
 const API = '/api/deck';
 const LETTERS = ['A','B','C','D','E','F','G'];
@@ -12,8 +13,8 @@ const esc = str => String(str).replace(/[&<>"']/g, c => (
   { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]
 ));
 
-let defaults = [];          // 既定リスト
-let picked = new Set();     // 選択した既定お題の id
+let defaults = [];          // 既定リスト（初期状態は全部入り）
+let excluded = new Set();   // そこから外した id
 let mine = [];              // 自作お題 {q, opts}
 let editingIdx = null;      // 自作お題の編集中インデックス
 let deckCode = '';          // 読み込み/保存済みのコード（あれば更新扱い）
@@ -36,41 +37,45 @@ function msg(el, text, ok) {
 const optsLine = opts => opts.map((t, i) => `${LETTERS[i]} ${esc(t)}`).join(' ・ ');
 
 // ===== 既定リスト =====
+// 全部入りが初期状態。要らないものを「外す」で除いていく
+const matches = (o, kw) => !kw || (o.q + ' ' + o.opts.join(' ')).toLowerCase().includes(kw);
+const keyword = () => $('#search').value.trim().toLowerCase();
+
 function renderPicks() {
-  const kw = $('#search').value.trim().toLowerCase();
-  const shown = kw
-    ? defaults.filter(o => (o.q + ' ' + o.opts.join(' ')).toLowerCase().includes(kw))
-    : defaults;
+  const kw = keyword();
+  const shown = defaults.filter(o => matches(o, kw));
   const box = $('#picks');
   if (!shown.length) {
     box.innerHTML = '<p class="empty-note">該当するお題がありません</p>';
     return;
   }
-  box.innerHTML = shown.map(o => `
-    <label class="pick">
-      <input type="checkbox" data-id="${o.id}" ${picked.has(o.id) ? 'checked' : ''}>
+  box.innerHTML = shown.map(o => {
+    const off = excluded.has(o.id);
+    return `
+    <div class="pick ${off ? 'off' : ''}">
       <span class="pick-body">
         <span class="pick-q">${esc(o.q)}</span>
         <span class="pick-o">${optsLine(o.opts)}</span>
       </span>
-    </label>`).join('');
+      <button type="button" class="pick-btn" data-toggle="${o.id}">${off ? '戻す' : '外す'}</button>
+    </div>`;
+  }).join('');
 }
-$('#picks').addEventListener('change', e => {
-  const cb = e.target.closest('input[type=checkbox]');
-  if (!cb) return;
-  const id = Number(cb.dataset.id);
-  if (cb.checked) picked.add(id); else picked.delete(id);
-  paintCount();
-});
-$('#search').addEventListener('input', renderPicks);
-$('#btn-all').addEventListener('click', () => {
-  const kw = $('#search').value.trim().toLowerCase();
-  defaults
-    .filter(o => !kw || (o.q + ' ' + o.opts.join(' ')).toLowerCase().includes(kw))
-    .forEach(o => picked.add(o.id));
+$('#picks').addEventListener('click', e => {
+  const btn = e.target.closest('[data-toggle]');
+  if (!btn) return;
+  const id = Number(btn.dataset.toggle);
+  if (excluded.has(id)) excluded.delete(id); else excluded.add(id);
   renderPicks(); paintCount();
 });
-$('#btn-none').addEventListener('click', () => { picked.clear(); renderPicks(); paintCount(); });
+$('#search').addEventListener('input', renderPicks);
+// 絞り込み中は表示されているものだけをまとめて外す
+$('#btn-none').addEventListener('click', () => {
+  const kw = keyword();
+  defaults.filter(o => matches(o, kw)).forEach(o => excluded.add(o.id));
+  renderPicks(); paintCount();
+});
+$('#btn-all').addEventListener('click', () => { excluded.clear(); renderPicks(); paintCount(); });
 
 // ===== 自作お題 =====
 function buildOptInputs() {
@@ -153,14 +158,15 @@ $('#btn-add').addEventListener('click', () => {
 // ===== 保存 =====
 function collect() {
   // 既定リストは元の並び順のまま、そのあとに自作お題
-  return defaults.filter(o => picked.has(o.id)).map(o => ({ q: o.q, opts: o.opts }))
+  return defaults.filter(o => !excluded.has(o.id)).map(o => ({ q: o.q, opts: o.opts }))
     .concat(mine.map(o => ({ q: o.q, opts: o.opts })));
 }
 function paintCount() {
   const n = collect().length;
+  const own = mine.length ? `（うち自作 ${mine.length} 件）` : '';
   $('#save-count').textContent = n < MIN_ITEMS
     ? `あと ${MIN_ITEMS - n} 件でお題リストを保存できます（現在 ${n} 件）`
-    : `お題 ${n} 件`;
+    : `お題 ${n} 件${own}`;
   $('#btn-save').disabled = n < MIN_ITEMS;
 }
 function showCode(code) {
@@ -169,6 +175,10 @@ function showCode(code) {
   $('#code-out').classList.add('on');
   $('#load-code').value = code;
   $('#btn-save').textContent = 'このリストを更新する';
+  // 同じタブで戻るので、コードを持たせてルーム作成画面に入力済みの状態にする
+  const use = $('#btn-use');
+  use.href = '/?deck=' + encodeURIComponent(code);
+  use.style.display = '';
 }
 $('#btn-save').addEventListener('click', async () => {
   $('#btn-save').disabled = true;
@@ -209,15 +219,17 @@ $('#btn-load').addEventListener('click', async () => {
   try {
     const deck = await call('GET', '?code=' + encodeURIComponent(code));
     $('#deck-name').value = deck.name || '';
-    // 既定リストと同じ内容のものはチェック済みに、それ以外は自作枠に入れる
+    // 既定リストと中身が同じものは残し、含まれていないものは「外した」状態にする。
+    // 既定に無いお題は自作枠へ回す
     const key = o => o.q + ' ' + o.opts.join('');
     const byKey = new Map(defaults.map(o => [key(o), o.id]));
-    picked = new Set();
+    const kept = new Set();
     mine = [];
     deck.odai.forEach(o => {
       const hit = byKey.get(key(o));
-      if (hit) picked.add(hit); else mine.push({ q: o.q, opts: o.opts });
+      if (hit) kept.add(hit); else mine.push({ q: o.q, opts: o.opts });
     });
+    excluded = new Set(defaults.filter(o => !kept.has(o.id)).map(o => o.id));
     showCode(deck.code);
     resetForm();
     renderPicks(); renderMine(); paintCount();
@@ -232,7 +244,8 @@ buildOptInputs();
 renderMine();
 paintCount();
 call('GET', '?defaults=1')
-  .then(d => { defaults = d.odai || []; renderPicks(); })
+  // 既定リストが届いた時点で全部入りになるので、件数と保存可否も引き直す
+  .then(d => { defaults = d.odai || []; renderPicks(); paintCount(); })
   .catch(e => { $('#picks').innerHTML = `<p class="empty-note">${esc(e.message)}</p>`; });
 
 // ?code=XXXXXX で開かれたら自動で読み込む

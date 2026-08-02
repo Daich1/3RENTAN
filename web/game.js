@@ -296,11 +296,11 @@ $('#btn-create-room').addEventListener('click', async () => {
   $('#btn-create-room').disabled = true;
   $('#create-status').textContent = '作成中...';
   try {
-    const rounds = parseInt($('#create-rounds').value) || 5;
+    const laps = parseInt($('#create-laps').value) || 1;
     const answerSeconds = parseInt($('#create-answer-sec').value) || 120;
     const revealSeconds = parseInt($('#create-reveal-sec').value) || 60;
     const deckCode = $('#create-deck').value.trim().toUpperCase();
-    const data = await apiPost({ action: 'create', name, rounds, answerSeconds, revealSeconds, deckCode });
+    const data = await apiPost({ action: 'create', name, laps, answerSeconds, revealSeconds, deckCode });
     myPlayerId = data.playerId;
     roomCode = data.code;
     saveSession();
@@ -376,11 +376,18 @@ function renderView(v) {
 
 // ===== Lobby =====
 function renderLobby(v) {
+  // ラウンド数は開始時の人数で決まるので、ロビーでは今の人数での見込みを出す
+  const planned = v.players.length * (v.laps || 1);
   setText($('#lobby-code'), v.roomCode);
-  setText($('#lobby-rules'), `回答 ${v.answerSeconds}秒 / 発表 ${v.revealSeconds}秒 ・ 全${v.totalRounds}R`);
+  setText($('#lobby-rules'),
+    `回答 ${v.answerSeconds}秒 / 発表 ${v.revealSeconds}秒 ・ ${v.laps || 1}周（${planned}R）`);
   // どのお題リストで遊ぶか。共通リストの時は出さない
   setText($('#lobby-deck'), v.deckName
     ? `お題リスト「${v.deckName}」（${v.deckCode} ・ ${v.odaiCount}件）`
+    : '');
+  // お題が足りないと最後まで回らないので先に知らせる
+  setText($('#lobby-warn'), v.odaiCount && planned > v.odaiCount
+    ? `お題が ${v.odaiCount} 件しかないため、${v.odaiCount} ラウンドで終了します`
     : '');
   // 顔ぶれが変わった時だけ組み直す。毎ポーリングで作り直すと
   // 入場アニメが再生され続けて名前が点滅し、コピーもできない

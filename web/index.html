@@ -84,13 +84,15 @@
             <input id="create-name" type="text" placeholder="Nelo" maxlength="10" class="input-field">
           </label>
           <label class="field">
-            <span class="field-label">ラウンド数</span>
+            <span class="field-label">周回数</span>
             <div class="select-wrap">
-              <select id="create-rounds" class="input-field">
-                <option value="3">3 ラウンド</option><option value="5" selected>5 ラウンド</option>
-                <option value="7">7 ラウンド</option><option value="10">10 ラウンド</option>
+              <select id="create-laps" class="input-field">
+                <option value="1" selected>1 周（全員が親を1回）</option>
+                <option value="2">2 周（全員が親を2回）</option>
+                <option value="3">3 周（全員が親を3回）</option>
               </select>
             </div>
+            <span class="field-hint">ラウンド数は「参加人数 × 周回数」で決まります。</span>
           </label>
           <div class="field-row">
             <label class="field">
@@ -163,6 +165,7 @@
             <span id="lobby-rules" class="ticket-note"></span>
           </div>
           <p id="lobby-deck" class="lobby-deck"></p>
+          <p id="lobby-warn" class="lobby-deck warn"></p>
 
           <!-- タップで招待URLをコピー。コード自体は長押しで選択もできる -->
           <button id="btn-copy-invite" class="room-code-display" type="button">

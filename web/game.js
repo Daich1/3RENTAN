@@ -10,6 +10,8 @@ const LS_KEY  = 'srt_session';
 let myPlayerId = null;
 let roomCode   = null;
 let pollTimer  = null;
+let polling    = false;   // 応答待ちの間に次を撃たない（遅い回線で順序が入れ替わる）
+let failedPolls = 0;
 let lastPhase  = null;
 let selPicks   = [];
 let selMode    = null; // 'oya' | 'predict' | null
@@ -47,6 +49,20 @@ function setText(el, str) {
 function clearList(el) {
   el.innerHTML = '';
   delete el.dataset.sig;
+}
+// 名前の長さに応じた圧縮クラス。文字数は書記素ではなくコードポイントで数える
+function nameCls(name) {
+  const len = [...String(name || '')].length;
+  return len >= 9 ? ' vlong' : len >= 7 ? ' long' : '';
+}
+// 得点降順に並んだ配列へ順位を振る。同点は同じ順位で、その分だけ次を飛ばす
+// （100/80/80/50 → 1位・2位・2位・4位）
+function withRanks(sorted) {
+  let rank = 0, prev = null;
+  return sorted.map((p, i) => {
+    if (prev === null || p.score !== prev) { rank = i + 1; prev = p.score; }
+    return { ...p, rank };
+  });
 }
 
 // ===== Sound =====
@@ -176,39 +192,66 @@ function saveSession() {
 function clearSession() {
   try { localStorage.removeItem(LS_KEY); } catch (e) {}
 }
+// 直近の部屋に戻る。通信が不安定なだけの時に席を捨てないよう、
+// 「部屋が無い / 自分が居ない」と分かった時だけセッションを消す
 async function tryRestore() {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) {}
   if (!s || !s.roomCode || !s.myPlayerId) return false;
   roomCode = s.roomCode; myPlayerId = s.myPlayerId;
-  try {
-    const v = await apiGet({ code: roomCode, playerId: myPlayerId });
-    if (!v.players || !v.players.some(p => p.id === myPlayerId)) throw new Error('not in room');
-    renderView(v);
-    startPolling();
-    return true;
-  } catch (e) {
+
+  let gone = false;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const v = await apiGet({ code: roomCode, playerId: myPlayerId });
+      if (!v.players || !v.players.some(p => p.id === myPlayerId)) { gone = true; break; }
+      renderView(v);
+      startPolling();
+      return true;
+    } catch (e) {
+      if (e.status === 404) { gone = true; break; }        // 部屋が消えている
+      if (i < 2) await new Promise(r => setTimeout(r, 600 * (i + 1)));   // 通信断。待って再試行
+    }
+  }
+  if (gone) {
     roomCode = null; myPlayerId = null; clearSession();
     return false;
   }
+  // サーバーに届かなかっただけ。席は残っているはずなので、待機画面で粘る
+  showScreen('wait');
+  setText($('#wait-title'), '再接続中…');
+  setText($('#wait-message'), '前回のルームに戻ろうとしています');
+  clearList($('#wait-progress'));
+  setOffline(true);
+  startPolling();
+  return true;
 }
 
 // ===== API =====
+// サーバーから返ったエラーには status を付ける。通信断（status なし）と
+// 「部屋が無い」を区別しないと、電波が切れただけで席を捨ててしまう
+function apiError(message, status) {
+  const e = new Error(message);
+  e.status = status;
+  return e;
+}
 async function apiPost(body) {
   const res = await fetch(API, {
     method: 'POST',
+    cache: 'no-store',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const data = await res.json();
-  if (!res.ok && data.error) throw new Error(data.error);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw apiError(data.error || '通信エラーが発生しました', res.status);
   return data;
 }
 async function apiGet(params) {
-  const qs = new URLSearchParams(params).toString();
-  const res = await fetch(API + '?' + qs);
-  const data = await res.json();
-  if (!res.ok && data.error) throw new Error(data.error);
+  // _ は中継やブラウザのキャッシュ避け。ポーリングが固まると盤面が止まる
+  const qs = new URLSearchParams({ ...params, _: Date.now() }).toString();
+  const res = await fetch(API + '?' + qs, { cache: 'no-store' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw apiError(data.error || '通信エラーが発生しました', res.status);
   return data;
 }
 
@@ -223,14 +266,38 @@ function stopPolling() {
   if (timerTicker) { clearInterval(timerTicker); timerTicker = null; }
 }
 async function poll() {
-  if (!roomCode || !myPlayerId) return;
+  if (!roomCode || !myPlayerId || polling) return;
+  polling = true;
   try {
     const v = await apiGet({ code: roomCode, playerId: myPlayerId });
+    failedPolls = 0;
+    setOffline(false);
     renderView(v);
   } catch (e) {
-    // Silent fail for transient network issues
+    // 部屋が消えた・自分が居ないのは復帰不能。それ以外は通信断とみなして粘る
+    if (e.status === 404) {
+      stopPolling();
+      clearSession();
+      myPlayerId = null; roomCode = null;
+      setOffline(false);
+      setText($('#error-message'), e.message);
+      showScreen('error');
+    } else if (++failedPolls >= 3) {
+      setOffline(true);
+    }
   }
+  polling = false;
 }
+// 再接続中の表示。実際の復帰はポーリングが通った時点で自動的に起きる
+function setOffline(on) {
+  const el = $('#net-status');
+  if (!el) return;
+  el.classList.toggle('on', on);
+  if (on) setText(el, '接続が切れています。再接続中…');
+}
+// タブ復帰・回線復帰の直後は待たずに取りに行く（モバイルはタイマーが止まる）
+document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+window.addEventListener('online', () => { failedPolls = 0; poll(); });
 
 // ===== Countdown Timer =====
 function updateTimer(v) {
@@ -278,11 +345,24 @@ function exitRoom(screen) {
   updateTimer({});
   Sound.bgm(null);
   lastPhase = null; lobbyCount = 0;
+  failedPolls = 0; setOffline(false);
+  selMode = null; revealRound = null;
   clearList($('#lobby-players'));
+  paintQuitBtn();
   showScreen(screen);
   // 退出通知。失敗してもポーリングが止まれば時間差で離脱扱いになる
   if (code && id) apiPost({ action: 'leave', code, playerId: id }).catch(() => {});
 }
+// ルームにいる間だけ退出ボタンを出す
+function paintQuitBtn() {
+  $('#btn-quit').style.display = roomCode ? '' : 'none';
+}
+// ゲーム中の退出は取り返しがつかないので確認する
+$('#btn-quit').addEventListener('click', () => {
+  const playing = lastPhase && lastPhase !== 'lobby' && lastPhase !== 'final';
+  if (playing && !confirm('ゲームの途中です。退出して別のルームに参加しますか？')) return;
+  exitRoom('title');
+});
 $$('.btn-back').forEach(b => b.addEventListener('click', () => exitRoom(b.dataset.to)));
 $('#btn-go-create').addEventListener('click', () => showScreen('create'));
 $('#btn-go-join').addEventListener('click', () => showScreen('join'));
@@ -358,6 +438,7 @@ function renderView(v) {
   clockOffset = (typeof v.now === 'number') ? v.now - Date.now() : 0;
   updateTimer(v);
   bgmForPhase(v.phase);
+  paintQuitBtn();
   if (lastPhase === 'reveal' && v.phase !== 'reveal') revealRound = null;
   // 復帰時に途中から入った場合は鳴らさない（lastPhase が null）
   if (lastPhase && lastPhase !== v.phase) {
@@ -615,6 +696,14 @@ function buildReveal(v) {
   $('#reveal-eyebrow').textContent = `REVEAL ・ 第${v.round}R ・ 親：${v.oyaName}`;
   $('#reveal-question').textContent = odai.q || '';
 
+  // お題カード。選択肢の対応表なのでラウンド中は中身が変わらない
+  $('#reveal-odai-card').innerHTML =
+    `<div class="odai-card-q">${esc(odai.q || '')}</div>` +
+    (odai.opts || []).map((t, i) =>
+      `<div class="odai-card-opt" data-idx="${i}">` +
+      `<span class="opt-badge ${BADGES[i]}">${LETTERS[i]}</span><span>${esc(t)}</span></div>`
+    ).join('');
+
   const cards = $('#reveal-cards');
   cards.innerHTML = '';
   for (let r = 0; r < 3; r++) {
@@ -734,8 +823,13 @@ function updateReveal(v) {
     }
   }
 
-  // --- みんなの予想の ○/△ ---
+  // --- お題カード: 開いた枠の選択肢を強調 ---
   const openIdx = answer.filter((x, r) => flipped[r] && x != null);
+  $$('#reveal-odai-card .odai-card-opt').forEach(el => {
+    el.classList.toggle('hit', openIdx.includes(parseInt(el.dataset.idx)));
+  });
+
+  // --- みんなの予想の ○/△ ---
   $$('#reveal-preds .pred-row').forEach(row => {
     row.querySelectorAll('.pred-badge').forEach((b, j) => {
       const idx = parseInt(b.dataset.idx);
@@ -770,16 +864,18 @@ function renderPayout(v) {
     row.className = `result-row ${r.cls}`;
     row.style.animationDelay = `${i * 0.09}s`;
     row.innerHTML = `
-      <span class="r-name">${esc(r.name)}</span>
+      <span class="r-name${nameCls(r.name)}">${esc(r.name)}</span>
       <span class="r-picks">${(r.pred||[]).map(i2=>LETTERS[i2]).join('→')}</span>
       <span class="r-yaku">${r.yaku}</span>
       <span class="r-pts">${r.pts>0?'+'+r.pts:'0'}pt</span>
       <span class="r-total">計${r.total}</span>`;
     list.appendChild(row);
   });
-  const sorted = [...v.players].sort((a,b) => b.score - a.score);
+  const sorted = withRanks([...v.players].sort((a,b) => b.score - a.score));
   $('#reveal-standings').innerHTML = `<div class="standings-title">現在の順位</div><div class="standings-chips">` +
-    sorted.map((p, i) => `<span class="standings-chip"><b>${i+1}</b>${esc(p.name)}<em>${p.score}pt</em></span>`).join('') +
+    sorted.map(p =>
+      `<span class="standings-chip${p.rank === 1 ? ' rank1' : ''}"><b>${p.rank}</b>${esc(p.name)}<em>${p.score}pt</em></span>`
+    ).join('') +
     `</div>`;
   // 予想と○△は結果リストに集約されるので、1画面に収まるよう畳む
   $('#reveal-preds-section').style.display = 'none';
@@ -820,7 +916,7 @@ function updateReadyBtn(v) {
 
 // ===== Final =====
 function renderFinal(v) {
-  const sorted = v.finalRanking || [...v.players].sort((a,b)=>b.score-a.score);
+  const sorted = withRanks(v.finalRanking || [...v.players].sort((a,b)=>b.score-a.score));
   const c = $('#final-ranking');
   // 順位が動かない画面。毎ポーリングで組み直すと名前が点滅してコピーできない
   const sig = sorted.map(p => p.id + ':' + p.name + ':' + p.score).join('|');
@@ -829,11 +925,11 @@ function renderFinal(v) {
   c.innerHTML = '';
   sorted.forEach((p,i) => {
     const row = document.createElement('div');
-    row.className = 'final-row';
+    row.className = `final-row${p.rank <= 3 ? ' rank' + p.rank : ''}`;
     row.style.animationDelay = `${i*0.12}s`;
     row.innerHTML = `
-      <span class="f-rank">${i<3?['1','2','3'][i]:i+1}</span>
-      <span class="f-name">${esc(p.name)}</span>
+      <span class="f-rank">${p.rank}</span>
+      <span class="f-name${nameCls(p.name)}">${esc(p.name)}</span>
       <span class="f-score">${p.score} <small>pt</small></span>`;
     c.appendChild(row);
   });

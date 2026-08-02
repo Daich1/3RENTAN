@@ -408,6 +408,27 @@ input,button,select{font-family:inherit}
   .yaku-ticket{flex:0 0 268px;position:sticky;top:44px}
 }
 
+/* お題カード ＋ 順位カード3枚を横1列に */
+.reveal-row{display:flex;gap:8px;align-items:flex-start;margin-top:14px}
+.reveal-row .flip-cards{flex:1;min-width:0;margin-top:0}
+.odai-card{
+  flex:0 0 104px;display:flex;flex-direction:column;gap:5px;
+  /* 順位カードは下にヒント行(6+14px)を持つぶん、その高さを差し引いて頭を揃える */
+  margin-bottom:20px;padding:8px 7px;
+  border-radius:12px;border:1.5px solid var(--ink);background:#fff;
+  box-shadow:0 10px 22px rgba(0,0,0,.3);
+}
+.odai-card-q{
+  font-size:10px;font-weight:800;line-height:1.35;color:var(--ink);
+  padding-bottom:5px;border-bottom:1.5px dashed var(--line-soft);
+}
+.odai-card-opt{display:flex;align-items:center;gap:4px;min-width:0}
+.odai-card-opt .opt-badge{flex:none;width:15px;height:15px;font-size:9px}
+.odai-card-opt span{font-size:9.5px;font-weight:700;color:var(--ink-sub);line-height:1.25;word-break:break-all}
+/* 開いた枠の選択肢は太字にして、どれが当たりか一目で分かるようにする */
+.odai-card-opt.hit span{color:var(--ink);font-weight:800}
+.odai-card-opt.hit .opt-badge{box-shadow:0 0 0 2px var(--ink)}
+
 .flip-cards{display:flex;gap:8px;margin-top:14px}
 .flip-card{
   flex:1;min-width:0;padding:0;border:none;background:none;
@@ -416,7 +437,9 @@ input,button,select{font-family:inherit}
 .flip-card.can-flip{cursor:pointer}
 .flip-card:disabled{opacity:1}
 .flip-inner{
-  position:relative;display:block;width:100%;aspect-ratio:5/7;
+  /* お題カードのぶん札が細くなるので、比率だけだと中身（的中バッジ）がはみ出す。
+     高さの下限を決めて、狭い画面では縦に伸ばして吸収する */
+  position:relative;display:block;width:100%;aspect-ratio:5/7;min-height:134px;
   transform-style:preserve-3d;-webkit-transform-style:preserve-3d;
   transition:transform .55s cubic-bezier(.3,1.05,.3,1);
 }
@@ -500,6 +523,9 @@ input,button,select{font-family:inherit}
 .result-row.tan{background:#fafbfe;border-color:var(--line-field)}
 .result-row.hazure{background:#f7f8fc;opacity:.55}
 .r-name{font-size:14px;font-weight:800;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 長い名前は切らずに縮めて収める（最大10文字まで入る想定） */
+.r-name.long{font-size:12px;letter-spacing:-.01em}
+.r-name.vlong{font-size:10.5px;letter-spacing:-.03em}
 .r-picks{font-size:12px;font-weight:800;color:var(--ink-mute);letter-spacing:.1em;white-space:nowrap}
 .r-yaku{font-size:12px;font-weight:800;white-space:nowrap}
 .r-pts{font-size:17px;font-weight:800;white-space:nowrap}
@@ -518,7 +544,8 @@ input,button,select{font-family:inherit}
   display:grid;place-items:center;width:16px;height:16px;border-radius:999px;
   background:var(--ink);color:#fff;font-size:10px;
 }
-.standings-chip:first-child b{background:#b08600}
+/* 金色は「先頭」ではなく「1位」に付ける。同率なら全員が金 */
+.standings-chip.rank1 b{background:#b08600}
 .standings-chip em{font-style:normal;color:var(--ink-mute)}
 
 .reveal-ready{display:grid;gap:10px}
@@ -530,24 +557,27 @@ input,button,select{font-family:inherit}
   border-radius:12px;background:#f7f8fc;border:1.5px solid var(--line-field);color:var(--ink);
   animation:sr-pop .45s both;
 }
-.final-row:nth-child(1){
+/* 表彰の色は「並び順」ではなく「順位」で決める。同点は同じ扱いにする */
+.final-row.rank1{
   position:relative;overflow:hidden;min-height:64px;
   background:linear-gradient(135deg,#fff6d6,#f5c518 55%,#e0a800);border-color:#b08600;
 }
-.final-row:nth-child(1)::after{
+.final-row.rank1::after{
   content:'';position:absolute;top:0;bottom:0;width:70px;
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);
   animation:sr-sheen 2.2s .4s ease-out infinite;
 }
-.final-row:nth-child(2){background:linear-gradient(135deg,#f4f6fa,#dfe3ee);border-color:#b9c0d4}
-.final-row:nth-child(3){background:linear-gradient(135deg,#f7efe9,#e6d5c8);border-color:#c8a184}
+.final-row.rank2{background:linear-gradient(135deg,#f4f6fa,#dfe3ee);border-color:#b9c0d4}
+.final-row.rank3{background:linear-gradient(135deg,#f7efe9,#e6d5c8);border-color:#c8a184}
 .f-rank{
   position:relative;width:30px;height:30px;flex-shrink:0;border-radius:999px;
   display:grid;place-items:center;background:var(--ink);color:#fff;
   font-size:14px;font-weight:800;
 }
-.final-row:nth-child(1) .f-rank{background:#7a5b00}
+.final-row.rank1 .f-rank{background:#7a5b00}
 .f-name{position:relative;flex:1;min-width:0;font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-name.long{font-size:14px;letter-spacing:-.01em}
+.f-name.vlong{font-size:12.5px;letter-spacing:-.02em}
 .f-score{position:relative;font-size:20px;font-weight:800;white-space:nowrap}
 .f-score small{font-size:12px;font-weight:800}
 
@@ -572,6 +602,26 @@ input,button,select{font-family:inherit}
 .badge-g{background:var(--col-g);color:#fff}
 
 /* ===== Countdown Timer ===== */
+/* 通信断の帯。復帰したら自動で消える */
+.net-status{
+  position:fixed;left:0;right:0;bottom:0;z-index:130;display:none;
+  padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+  background:rgba(229,57,53,.95);color:#fff;
+  font-size:12px;font-weight:800;text-align:center;letter-spacing:.04em;
+}
+.net-status.on{display:block}
+
+/* 退出ボタン。ゲーム中でも抜けられるよう常時出しておく */
+.quit-btn{
+  position:fixed;z-index:120;
+  top:calc(5px + env(safe-area-inset-top));left:9px;
+  width:auto;min-height:36px;padding:0 12px;border-radius:999px;
+  border:1.5px solid rgba(255,255,255,.22);background:rgba(9,11,24,.75);
+  color:#c9cee6;font-size:12px;font-weight:800;cursor:pointer;
+  backdrop-filter:blur(6px);
+}
+.quit-btn:active{border-color:var(--accent);color:#fff}
+
 /* 音トグル。カウントダウンバーと重ならないよう両脇に余白を空けてある */
 .sound-toggle{
   position:fixed;z-index:120;
@@ -611,7 +661,7 @@ input,button,select{font-family:inherit}
 
 .global-timer{
   position:fixed;top:0;left:0;right:0;z-index:100;display:none;
-  padding:calc(4px + env(safe-area-inset-top)) 52px 3px;
+  padding:calc(4px + env(safe-area-inset-top)) 64px 3px;
   background:rgba(9,11,24,.82);backdrop-filter:blur(6px);
   border-bottom:1px solid rgba(255,255,255,.08);
 }
@@ -635,7 +685,7 @@ input,button,select{font-family:inherit}
 #screen-reveal .divider-dark{margin:10px 0}
 #screen-reveal .mini-question{margin-top:8px;font-size:18px}
 #screen-reveal .hype-line{min-height:42px;padding:8px;font-size:14px}
-#screen-reveal .flip-cards{margin-top:10px}
+#screen-reveal .reveal-row{margin-top:10px}
 #screen-reveal .section-head{margin-bottom:8px}
 #screen-reveal .result-list{margin-top:12px;gap:6px}
 #screen-reveal .result-row{min-height:44px;padding:6px 10px}
@@ -666,7 +716,14 @@ input,button,select{font-family:inherit}
 
 /* 画面が低い端末ではさらに詰める */
 @media(max-height:780px){
-  #screen-reveal .flip-inner{aspect-ratio:5/6}
+  #screen-reveal .flip-inner{aspect-ratio:5/6;min-height:112px}
+  /* 札が低くなるぶん中身も詰める（的中バッジがはみ出て消えるのを防ぐ） */
+  #screen-reveal .flip-front{gap:3px;padding:6px 3px}
+  #screen-reveal .flip-badge{width:34px;height:34px;font-size:17px}
+  #screen-reveal .flip-label{font-size:11px;line-height:1.2}
+  #screen-reveal .flip-hits{font-size:9px;padding:2px 6px}
+  #screen-reveal .odai-card{padding:6px 5px;gap:4px}
+  #screen-reveal .odai-card-q{font-size:9.5px}
   #screen-reveal .ticket-body{padding:12px 14px 14px}
   #screen-reveal .mini-question{font-size:16px}
   #screen-reveal .hype-line{min-height:38px;font-size:13px}
@@ -691,13 +748,22 @@ input,button,select{font-family:inherit}
   .input-code{font-size:26px}
   .yaku-line b,.yaku-line i{font-size:13px}
   .yaku-item p{font-size:11px}
+  /* 狭幅ではお題カードを細くして、順位カードの取り分を確保する */
+  .reveal-row{gap:6px}
+  .odai-card{flex-basis:88px;padding:6px 5px}
+  .odai-card-opt span{font-size:9px}
   /* 発表の結果行: 狭幅では予想手を隠して役・加点・累計を優先表示 */
   .result-row{gap:6px;padding:8px}
   .result-row .r-picks{display:none}
   #screen-reveal .result-row{gap:5px;padding:6px 8px}
   #screen-reveal .result-row .r-picks{font-size:11px;letter-spacing:.06em}
-  #screen-reveal .result-row .r-name{max-width:5.5em}
   .r-name{font-size:13px}
+  .r-name.long{font-size:11.5px}
+  .r-name.vlong{font-size:10px}
+  /* ごく狭い画面では予想手を落とす。役・加点・累計と名前を優先する */
+  @media(max-width:370px){
+    #screen-reveal .result-row .r-picks{display:none}
+  }
   .r-yaku{font-size:11px}
   .r-pts{font-size:15px}
   .result-row .r-total{font-size:10px}

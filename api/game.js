@@ -10,6 +10,9 @@ function fail(res, result) {
 }
 
 module.exports = async (req, res) => {
+  // ポーリングの応答がブラウザや中継に握られると盤面が止まって見えるので、
+  // API の応答は一切キャッシュさせない
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

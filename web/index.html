@@ -8,6 +8,12 @@
 </head>
 <body>
 
+<!-- 通信が切れている間だけ出す帯 -->
+<div id="net-status" class="net-status"></div>
+
+<!-- ルームにいる間だけ出す退出ボタン（ゲーム中でも抜けられる） -->
+<button id="btn-quit" class="quit-btn" type="button" style="display:none">退出</button>
+
 <!-- 音量パネル（BGM・効果音は別々に調整できる） -->
 <button id="btn-sound" class="sound-toggle" type="button" aria-label="音の設定" aria-expanded="false">🔊</button>
 <div id="sound-panel" class="sound-panel" hidden>
@@ -309,7 +315,11 @@
           <div class="divider-dark"></div>
 
           <div id="reveal-hype" class="hype-line"></div>
-          <div id="reveal-cards" class="flip-cards"></div>
+          <!-- 左端はお題カード。予想欄が A〜G の記号だけなので、対応表を常に見せる -->
+          <div class="reveal-row">
+            <div id="reveal-odai-card" class="odai-card"></div>
+            <div id="reveal-cards" class="flip-cards"></div>
+          </div>
           <div id="reveal-payout" class="payout-wrap"></div>
           <div id="reveal-scores" class="result-list"></div>
 

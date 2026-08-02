@@ -279,17 +279,20 @@
           <div id="reveal-payout" class="payout-wrap"></div>
           <div id="reveal-scores" class="result-list"></div>
 
-          <div class="divider-dark"></div>
-          <div class="section-head">
-            <span class="section-title">みんなの予想</span>
-            <span class="section-note"><b class="mk-o">○</b> 順位まで <b class="mk-s">△</b> 選択のみ</span>
+          <!-- 配当が出たら結果リストに情報が集約されるので、この節ごと畳む -->
+          <div id="reveal-preds-section">
+            <div class="divider-dark"></div>
+            <div class="section-head">
+              <span class="section-title">みんなの予想</span>
+              <span class="section-note"><b class="mk-o">○</b> 順位まで <b class="mk-s">△</b> 選択のみ</span>
+            </div>
+            <div id="reveal-preds" class="pred-list"></div>
           </div>
-          <div id="reveal-preds" class="pred-list"></div>
           <div id="reveal-standings" class="standings"></div>
 
           <div class="divider-dark"></div>
           <div class="reveal-ready">
-            <div id="reveal-ready-progress" class="wait-progress"></div>
+            <div id="reveal-ready-progress" class="ready-chips"></div>
             <button id="btn-ready-next" class="btn-primary">次のレースへ ▶</button>
           </div>
         </div>

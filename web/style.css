@@ -341,12 +341,20 @@ input,button,select{font-family:inherit}
   font-size:13px;font-weight:800;color:#dfe3f5;
 }
 .wait-player .status-dot{width:9px;height:9px;border-radius:999px;flex-shrink:0}
+.wait-player .sp-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wait-player .sp-flag{flex:0 0 auto}
 .status-dot.done{background:var(--col-f)}
 .status-dot.pending{background:#4a5075}
 
-/* Reveal 側の進捗リストは白地カード上に置かれるので色を反転 */
-.reveal-ready .wait-player{background:#f7f8fc;border-color:var(--line-field);color:var(--ink-label)}
-.reveal-ready .status-dot.pending{background:var(--line-soft)}
+/* 次へ進む準備の進捗。行で積むと縦に伸びるのでチップを折り返す */
+.ready-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.ready-chips:empty{display:none}
+.ready-chip{
+  padding:4px 10px;border-radius:999px;
+  border:1.5px solid var(--line-field);background:#f7f8fc;color:var(--ink-mute);
+  font-size:11px;font-weight:800;transition:background .2s,color .2s,border-color .2s;
+}
+.ready-chip.done{background:#e8f5e9;border-color:#a5d6a7;color:#1b5e20}
 
 /* ===== Reveal: 親の順位カードめくり ===== */
 .hype-line{
@@ -406,16 +414,7 @@ input,button,select{font-family:inherit}
 .flip-card.open .flip-hint{color:var(--line)}
 
 .payout-wrap:empty{display:none}
-.payout-wait{margin-top:16px;text-align:center;font-size:12px;font-weight:800;color:var(--ink-mute)}
-.btn-gold{
-  display:block;width:100%;min-height:54px;margin-top:16px;
-  border:none;border-radius:12px;
-  background:linear-gradient(135deg,#fff6d6,#f5c518 60%,#e0a800);color:var(--ink);
-  font-size:17px;font-weight:800;letter-spacing:.06em;cursor:pointer;
-  box-shadow:0 5px 0 #b08600;animation:sr-pop .5s both;transition:transform .12s,box-shadow .12s;
-}
-.btn-gold:active{transform:translateY(3px);box-shadow:0 2px 0 #b08600}
-.btn-gold:disabled{opacity:.6;cursor:default}
+.payout-wait{margin-top:14px;text-align:center;font-size:12px;font-weight:800;color:var(--ink-mute)}
 
 /* みんなの予想 */
 .pred-list{display:grid;gap:6px}
@@ -460,17 +459,23 @@ input,button,select{font-family:inherit}
 .r-pts{font-size:17px;font-weight:800;white-space:nowrap}
 .result-row .r-total{font-size:11px;font-weight:800;opacity:.7;white-space:nowrap}
 
-.standings{margin-top:16px}
-.standings-title{font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--ink-mute);margin-bottom:8px}
-.standings-row{
-  display:flex;align-items:center;justify-content:space-between;gap:8px;
-  padding:6px 10px;border-radius:8px;background:#f7f8fc;margin-bottom:4px;
-  font-size:13px;color:var(--ink);
+.standings{margin-top:14px}
+.standings-title{font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--ink-mute);margin-bottom:6px}
+/* 順位も1人1行だと縦に伸びるのでチップで折り返す */
+.standings-chips{display:flex;flex-wrap:wrap;gap:6px}
+.standings-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:999px;background:#f7f8fc;border:1.5px solid var(--line-field);
+  font-size:12px;font-weight:800;color:var(--ink);
 }
-.standings-row .s-name{font-weight:800}
-.standings-row .s-score{font-weight:800}
+.standings-chip b{
+  display:grid;place-items:center;width:16px;height:16px;border-radius:999px;
+  background:var(--ink);color:#fff;font-size:10px;
+}
+.standings-chip:first-child b{background:#b08600}
+.standings-chip em{font-style:normal;color:var(--ink-mute)}
 
-.reveal-ready{display:grid;gap:12px}
+.reveal-ready{display:grid;gap:10px}
 
 /* ===== Final ===== */
 .final-ranking{display:grid;gap:8px}
@@ -539,6 +544,56 @@ input,button,select{font-family:inherit}
   color:#fff;padding:3px 0 1px;letter-spacing:.08em;
 }
 
+/* ===== 縦圧縮: スクロールせず1画面で進行できるようにする ===== */
+/* 発表（配当ボタンを廃したぶんの余白も詰める） */
+#screen-reveal{padding-top:calc(34px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+#screen-reveal .screen-caption{margin-bottom:8px}
+#screen-reveal .ticket-body{padding:14px 16px 16px}
+#screen-reveal .divider-dark{margin:10px 0}
+#screen-reveal .mini-question{margin-top:8px;font-size:18px}
+#screen-reveal .hype-line{min-height:42px;padding:8px;font-size:14px}
+#screen-reveal .flip-cards{margin-top:10px}
+#screen-reveal .section-head{margin-bottom:8px}
+#screen-reveal .result-list{margin-top:12px;gap:6px}
+#screen-reveal .result-row{min-height:44px;padding:6px 10px}
+#screen-reveal .pred-row{min-height:40px;padding:5px 9px}
+/* 配当後は「みんなの予想」を畳むので、狭幅でも予想手だけは結果行に残す */
+#screen-reveal .result-row .r-picks{display:inline}
+
+/* 選択（選択肢が7つあるので行間を詰め、ボタンは横並び） */
+#screen-select .ticket-body{padding:16px 16px 18px}
+#screen-select .divider-dark{margin:12px 0}
+#screen-select .mini-question{margin-top:8px}
+#screen-select .rank-slot{min-height:72px}
+#screen-select .pick-hint{margin:12px 0 8px}
+#screen-select .choice-list{gap:6px}
+#screen-select .choice-btn{min-height:46px}
+#screen-select .action-row{grid-template-columns:104px 1fr;margin-top:14px}
+#screen-select #btn-undo{order:-1}
+#screen-select #btn-confirm{min-height:48px}
+
+/* ロビー・お題 */
+#screen-lobby .room-code-value{font-size:44px}
+#screen-lobby .lobby-players{gap:6px}
+#screen-lobby .lobby-player{min-height:44px}
+#screen-lobby .divider-dark{margin:14px 0}
+#screen-draw .topic-question{margin:14px 0 4px}
+#screen-draw .topic-opt{padding:7px 2px}
+#screen-draw .divider-dark{margin:12px 0}
+
+/* 画面が低い端末ではさらに詰める */
+@media(max-height:780px){
+  #screen-reveal .flip-inner{aspect-ratio:5/6}
+  #screen-reveal .ticket-body{padding:12px 14px 14px}
+  #screen-reveal .mini-question{font-size:16px}
+  #screen-reveal .hype-line{min-height:38px;font-size:13px}
+  #screen-reveal .result-row{min-height:40px}
+  #screen-select .rank-slot{min-height:64px}
+  #screen-select .choice-btn{min-height:42px;font-size:15px}
+  #screen-lobby .lobby-player{min-height:40px}
+  #screen-lobby .room-code-value{font-size:38px}
+}
+
 /* ===== Responsive ===== */
 @media(max-width:400px){
   .screen{padding-left:12px;padding-right:12px}
@@ -554,6 +609,9 @@ input,button,select{font-family:inherit}
   /* 発表の結果行: 狭幅では予想手を隠して役・加点・累計を優先表示 */
   .result-row{gap:6px;padding:8px}
   .result-row .r-picks{display:none}
+  #screen-reveal .result-row{gap:5px;padding:6px 8px}
+  #screen-reveal .result-row .r-picks{font-size:11px;letter-spacing:.06em}
+  #screen-reveal .result-row .r-name{max-width:5.5em}
   .r-name{font-size:13px}
   .r-yaku{font-size:11px}
   .r-pts{font-size:15px}

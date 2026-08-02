@@ -31,9 +31,20 @@ function esc(str) {
   ));
 }
 function showScreen(id) {
-  $$('.screen').forEach(s => s.classList.remove('active'));
   const el = $(`#screen-${id}`);
-  if (el) { el.classList.add('active'); window.scrollTo(0,0); }
+  if (!el || el.classList.contains('active')) return; // 毎ポーリングで呼ばれるので同じ画面なら何もしない
+  $$('.screen').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  window.scrollTo(0,0);
+}
+// textContent を毎回代入するとテキストノードが作り直され、
+// 選択（コピペ）が1秒ごとに解除されるので値が変わった時だけ書く
+function setText(el, str) {
+  if (el && el.textContent !== str) el.textContent = str;
+}
+function clearList(el) {
+  el.innerHTML = '';
+  delete el.dataset.sig;
 }
 
 // ===== Session persistence (リロード復帰) =====
@@ -223,24 +234,30 @@ function renderView(v) {
 
 // ===== Lobby =====
 function renderLobby(v) {
-  $('#lobby-code').textContent = v.roomCode;
-  $('#lobby-rules').textContent = `回答 ${v.answerSeconds}秒 / 発表 ${v.revealSeconds}秒 ・ 全${v.totalRounds}R`;
+  setText($('#lobby-code'), v.roomCode);
+  setText($('#lobby-rules'), `回答 ${v.answerSeconds}秒 / 発表 ${v.revealSeconds}秒 ・ 全${v.totalRounds}R`);
+  // 顔ぶれが変わった時だけ組み直す。毎ポーリングで作り直すと
+  // 入場アニメが再生され続けて名前が点滅し、コピーもできない
   const c = $('#lobby-players');
-  c.innerHTML = '';
-  v.players.forEach((p, i) => {
-    const d = document.createElement('div');
-    d.className = 'lobby-player';
-    d.innerHTML = `<span class="p-dot" style="background:${p.color}"></span><span>${esc(p.name)}</span>${i===0?'<span class="p-host">HOST</span>':''}`;
-    c.appendChild(d);
-  });
+  const sig = v.players.map(p => p.id + ':' + p.name).join('|');
+  if (c.dataset.sig !== sig) {
+    c.dataset.sig = sig;
+    c.innerHTML = '';
+    v.players.forEach((p, i) => {
+      const d = document.createElement('div');
+      d.className = 'lobby-player';
+      d.innerHTML = `<span class="p-dot" style="background:${p.color}"></span><span>${esc(p.name)}</span>${i===0?'<span class="p-host">HOST</span>':''}`;
+      c.appendChild(d);
+    });
+  }
   if (v.isHost) {
     $('#lobby-host-controls').style.display = '';
     $('#btn-start-game').disabled = v.players.length < 2;
-    $('#lobby-status').textContent = v.players.length < 2 ? '2人以上で開始できます' : '準備OK！';
+    setText($('#lobby-status'), v.players.length < 2 ? '2人以上で開始できます' : '準備OK！');
     $('#lobby-status').style.color = '';
   } else {
     $('#lobby-host-controls').style.display = 'none';
-    $('#lobby-status').textContent = 'ホストの開始を待っています...';
+    setText($('#lobby-status'), 'ホストの開始を待っています...');
     $('#lobby-status').style.color = '#888';
   }
 }
@@ -249,7 +266,7 @@ function renderLobby(v) {
 function renderDraw(v) {
   if (v.isOya) {
     showScreen('draw');
-    $('#draw-round-badge').textContent = `第${v.round}R / ${v.totalRounds}`;
+    setText($('#draw-round-badge'), `第${v.round}R / ${v.totalRounds}`);
     if (lastPhase !== 'draw') lastCandidateId = null;
     const odai = v.odai;
     if (odai && odai.id !== lastCandidateId) {
@@ -258,9 +275,9 @@ function renderDraw(v) {
     }
   } else {
     showScreen('wait');
-    $('#wait-title').textContent = `${v.oyaName} がお題を選択中`;
-    $('#wait-message').textContent = '親が山札からお題を引いています…';
-    $('#wait-progress').innerHTML = '';
+    setText($('#wait-title'), `${v.oyaName} がお題を選択中`);
+    setText($('#wait-message'), '親が山札からお題を引いています…');
+    clearList($('#wait-progress'));
     lastCandidateId = null;
   }
 }
@@ -287,8 +304,8 @@ function playDrawReveal(odai) {
 function renderAnswer(v) {
   if (v.hasSubmitted) {
     showScreen('wait');
-    $('#wait-title').textContent = '提出済み！';
-    $('#wait-message').textContent = '全員の回答を待っています';
+    setText($('#wait-title'), '提出済み！');
+    setText($('#wait-message'), '全員の回答を待っています');
     renderSubmitProgress(v);
     return;
   }
@@ -299,17 +316,29 @@ function renderAnswer(v) {
   }
 }
 
+// 名前の行は組み直さず、丸と OK/… だけ差し替える（点滅・選択解除の防止）
 function renderSubmitProgress(v) {
   const c = $('#wait-progress');
-  c.innerHTML = '';
-  if (!v.submittedStatus) return;
-  v.players.forEach(p => {
-    const done = v.submittedStatus[p.id];
-    const isOya = p.id === v.oyaId;
-    const d = document.createElement('div');
-    d.className = 'wait-player';
-    d.innerHTML = `<span class="status-dot ${done?'done':'pending'}"></span> ${esc(p.name)}${isOya?'（親）':''} ${done?'OK':'…'}`;
-    c.appendChild(d);
+  if (!v.submittedStatus) { clearList(c); return; }
+  const sig = v.players.map(p => p.id + ':' + p.name).join('|');
+  if (c.dataset.sig !== sig) {
+    c.dataset.sig = sig;
+    c.innerHTML = '';
+    v.players.forEach(p => {
+      const d = document.createElement('div');
+      d.className = 'wait-player';
+      d.innerHTML = `<span class="status-dot pending"></span>` +
+        `<span class="sp-name">${esc(p.name)}${p.id === v.oyaId ? '（親）' : ''}</span>` +
+        `<span class="sp-flag">…</span>`;
+      c.appendChild(d);
+    });
+  }
+  v.players.forEach((p, i) => {
+    const row = c.children[i];
+    if (!row) return;
+    const done = !!v.submittedStatus[p.id];
+    row.querySelector('.status-dot').className = `status-dot ${done ? 'done' : 'pending'}`;
+    setText(row.querySelector('.sp-flag'), done ? 'OK' : '…');
   });
 }
 
@@ -361,9 +390,9 @@ $('#btn-confirm').addEventListener('click', () => {
   if (selPicks.length !== 3) return;
   sendAction('submit_answer', { answer: [...selPicks] });
   showScreen('wait');
-  $('#wait-title').textContent = '提出済み！';
-  $('#wait-message').textContent = '全員の回答を待っています…';
-  $('#wait-progress').innerHTML = '';
+  setText($('#wait-title'), '提出済み！');
+  setText($('#wait-message'), '全員の回答を待っています…');
+  clearList($('#wait-progress'));
   selMode = null;
 });
 
@@ -458,6 +487,8 @@ function buildReveal(v) {
 
   $('#reveal-scores').innerHTML = '';
   $('#reveal-standings').innerHTML = '';
+  $('#reveal-preds-section').style.display = '';
+  clearList($('#reveal-ready-progress'));
   const pay = $('#reveal-payout');
   pay.innerHTML = '';
   delete pay.dataset.state;
@@ -483,7 +514,7 @@ function updateReveal(v) {
   const openCount = flipped.filter(Boolean).length;
   const canFlip = v.isOya && !v.payoutOpen;
 
-  $('#reveal-open-label').textContent = `${openCount} / 3 オープン`;
+  setText($('#reveal-open-label'), `${openCount} / 3 オープン`);
 
   // --- 順位カード ---
   $$('#reveal-cards .flip-card').forEach(btn => {
@@ -501,47 +532,34 @@ function updateReveal(v) {
     }
     btn.classList.toggle('can-flip', canFlip && !isOpen);
     btn.disabled = !canFlip || isOpen;
-    btn.querySelector('.flip-hint').textContent =
-      isOpen ? 'オープン済み' : (canFlip ? 'タップでオープン' : '');
+    setText(btn.querySelector('.flip-hint'),
+      isOpen ? 'オープン済み' : (canFlip ? 'タップでオープン' : ''));
   });
 
   // --- 煽り文 ---
   const hype = $('#reveal-hype');
   const who = v.isOya ? 'あなた' : v.oyaName;
   if (v.payoutOpen) {
-    hype.textContent = '配当オープン！';
+    setText(hype, '配当オープン！');
   } else if (openCount === 0) {
-    hype.textContent = `さあ親の${who}、どこから開ける？`;
-  } else if (openCount === 3) {
-    hype.textContent = '3枚オープン！配当いくぞ〜！';
+    setText(hype, `さあ親の${who}、どこから開ける？`);
   } else if (openCount === 2) {
-    hype.textContent = '残り1枚…ここで役が決まる！';
+    setText(hype, '残り1枚…ここで役が決まる！');
   } else {
-    hype.textContent = 'まだまだ、次いこう！';
+    setText(hype, 'まだまだ、次いこう！');
   }
 
-  // --- 配当ボタン / 待ち文言 ---
-  // 毎ポーリングで組み直すとアニメが再生され続けるので、状態が変わった時だけ描く
+  // --- めくり待ちの文言（3枚目で配当は自動オープン）---
   const pay = $('#reveal-payout');
-  const payState = v.payoutOpen ? 'open'
-    : openCount < 3 ? (v.isOya ? 'flipping' : 'watching')
-    : v.isOya ? 'ready' : 'waiting';
+  const payState = v.payoutOpen ? 'open' : (v.isOya ? 'flipping' : 'watching');
   if (pay.dataset.state !== payState) {
     pay.dataset.state = payState;
     if (payState === 'open') {
       pay.innerHTML = '';
     } else if (payState === 'flipping') {
-      pay.innerHTML = `<p class="payout-wait">3枚めくると配当がオープンできます</p>`;
-    } else if (payState === 'watching') {
-      pay.innerHTML = `<p class="payout-wait">${esc(v.oyaName)} が順位カードをめくっています…</p>`;
-    } else if (payState === 'waiting') {
-      pay.innerHTML = `<p class="payout-wait">親が配当をオープンするのを待っています…</p>`;
+      pay.innerHTML = `<p class="payout-wait">3枚めくると配当が出ます</p>`;
     } else {
-      pay.innerHTML = `<button id="btn-open-payout" type="button" class="btn-gold">配当を一斉オープン！</button>`;
-      pay.querySelector('#btn-open-payout').addEventListener('click', e => {
-        e.currentTarget.disabled = true;
-        sendAction('open_payout');
-      });
+      pay.innerHTML = `<p class="payout-wait">${esc(v.oyaName)} が順位カードをめくっています…</p>`;
     }
   }
 
@@ -554,54 +572,83 @@ function updateReveal(v) {
       const soft  = !exact && openIdx.includes(idx);
       b.classList.toggle('hit-exact', exact);
       b.classList.toggle('hit-soft', soft);
-      b.querySelector('.pred-mark').textContent = exact ? '○' : (soft ? '△' : '');
+      setText(b.querySelector('.pred-mark'), exact ? '○' : (soft ? '△' : ''));
     });
   });
 
   // --- 配当（役・点）と現在の順位 ---
-  const list = $('#reveal-scores');
-  if (v.payoutOpen && list.childElementCount === 0 && (v.roundResults||[]).length) {
-    v.roundResults.forEach((r, i) => {
-      const row = document.createElement('div');
-      row.className = `result-row ${r.cls}`;
-      row.style.animationDelay = `${i * 0.09}s`;
-      row.innerHTML = `
-        <span class="r-name">${esc(r.name)}</span>
-        <span class="r-picks">${(r.pred||[]).map(i2=>LETTERS[i2]).join('→')}</span>
-        <span class="r-yaku">${r.yaku}</span>
-        <span class="r-pts">${r.pts>0?'+'+r.pts:'0'}pt</span>
-        <span class="r-total">計${r.total}</span>`;
-      list.appendChild(row);
-    });
-    const sorted = [...v.players].sort((a,b) => b.score - a.score);
-    $('#reveal-standings').innerHTML = `<div class="standings-title">現在の順位</div>` +
-      sorted.map(p => `<div class="standings-row"><span class="s-name">${esc(p.name)}</span><span class="s-score">${p.score}pt</span></div>`).join('');
+  // 3枚目のめくり演出が終わってから出す（同時だと役が先に見えてしまう）
+  if (v.payoutOpen && $('#reveal-scores').childElementCount === 0 && (v.roundResults||[]).length) {
+    const round = v.round;
+    setTimeout(() => {
+      if (revealRound === round && $('#reveal-scores').childElementCount === 0) renderPayout(v);
+    }, 550);
   }
+}
+
+function renderPayout(v) {
+  const list = $('#reveal-scores');
+  v.roundResults.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = `result-row ${r.cls}`;
+    row.style.animationDelay = `${i * 0.09}s`;
+    row.innerHTML = `
+      <span class="r-name">${esc(r.name)}</span>
+      <span class="r-picks">${(r.pred||[]).map(i2=>LETTERS[i2]).join('→')}</span>
+      <span class="r-yaku">${r.yaku}</span>
+      <span class="r-pts">${r.pts>0?'+'+r.pts:'0'}pt</span>
+      <span class="r-total">計${r.total}</span>`;
+    list.appendChild(row);
+  });
+  const sorted = [...v.players].sort((a,b) => b.score - a.score);
+  $('#reveal-standings').innerHTML = `<div class="standings-title">現在の順位</div><div class="standings-chips">` +
+    sorted.map((p, i) => `<span class="standings-chip"><b>${i+1}</b>${esc(p.name)}<em>${p.score}pt</em></span>`).join('') +
+    `</div>`;
+  // 予想と○△は結果リストに集約されるので、1画面に収まるよう畳む
+  $('#reveal-preds-section').style.display = 'none';
 }
 
 function updateReadyUI(v) {
   const c = $('#reveal-ready-progress');
+  const players = v.players || [];
   // 配当オープン前は「次へ」自体が押せないので進捗も出さない
-  c.innerHTML = '';
-  if (v.payoutOpen) {
-    (v.players||[]).forEach(p => {
-      const done = v.readyStatus && v.readyStatus[p.id];
-      const d = document.createElement('div');
-      d.className = 'wait-player';
-      d.innerHTML = `<span class="status-dot ${done?'done':'pending'}"></span> ${esc(p.name)} ${done?'OK':'…'}`;
-      c.appendChild(d);
+  if (!v.payoutOpen) { clearList(c); return updateReadyBtn(v); }
+  // 名前は組み直さず、済/未の色だけ切り替える
+  const sig = players.map(p => p.id + ':' + p.name).join('|');
+  if (c.dataset.sig !== sig) {
+    c.dataset.sig = sig;
+    c.innerHTML = '';
+    players.forEach(p => {
+      const s = document.createElement('span');
+      s.className = 'ready-chip';
+      s.textContent = p.name;
+      c.appendChild(s);
     });
   }
+  players.forEach((p, i) => {
+    const chip = c.children[i];
+    if (chip) chip.classList.toggle('done', !!(v.readyStatus && v.readyStatus[p.id]));
+  });
+  updateReadyBtn(v);
+}
+
+function updateReadyBtn(v) {
   const btn = $('#btn-ready-next');
+  const isLast = v.round >= v.totalRounds; // 最終ラウンドは次のレースが無い
   btn.disabled = !v.payoutOpen || !!v.isReady;
-  btn.textContent = !v.payoutOpen ? '配当オープン待ち'
-    : (v.isReady ? '待機中…' : '次のレースへ ▶');
+  setText(btn, !v.payoutOpen ? 'カードオープン待ち'
+    : v.isReady ? '待機中…'
+    : isLast ? '最終結果へ ▶' : '次のレースへ ▶');
 }
 
 // ===== Final =====
 function renderFinal(v) {
   const sorted = v.finalRanking || [...v.players].sort((a,b)=>b.score-a.score);
   const c = $('#final-ranking');
+  // 順位が動かない画面。毎ポーリングで組み直すと名前が点滅してコピーできない
+  const sig = sorted.map(p => p.id + ':' + p.name + ':' + p.score).join('|');
+  if (c.dataset.sig === sig) return;
+  c.dataset.sig = sig;
   c.innerHTML = '';
   sorted.forEach((p,i) => {
     const row = document.createElement('div');

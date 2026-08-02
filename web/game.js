@@ -204,23 +204,26 @@ function tickTimer() {
 }
 
 // ===== Navigation =====
-$$('.btn-back').forEach(b => b.addEventListener('click', () => {
+// 部屋から抜けてローカル状態を初期化する。再入室した時に前の部屋の
+// 画面・人数・フェーズが残らないよう、描画用のキャッシュもここで捨てる
+function exitRoom(screen) {
+  const code = roomCode, id = myPlayerId;
   stopPolling();
   myPlayerId = null; roomCode = null;
   clearSession();
   updateTimer({});
   Sound.bgm(null);
-  showScreen(b.dataset.to);
-}));
+  lastPhase = null; lobbyCount = 0;
+  clearList($('#lobby-players'));
+  showScreen(screen);
+  // 退出通知。失敗してもポーリングが止まれば時間差で離脱扱いになる
+  if (code && id) apiPost({ action: 'leave', code, playerId: id }).catch(() => {});
+}
+$$('.btn-back').forEach(b => b.addEventListener('click', () => exitRoom(b.dataset.to)));
 $('#btn-go-create').addEventListener('click', () => showScreen('create'));
 $('#btn-go-join').addEventListener('click', () => showScreen('join'));
-$('#btn-back-title').addEventListener('click', () => {
-  stopPolling(); myPlayerId = null; roomCode = null;
-  clearSession();
-  updateTimer({});
-  Sound.bgm(null);
-  showScreen('title');
-});
+$('#btn-back-title').addEventListener('click', () => exitRoom('title'));
+$('#btn-leave-room').addEventListener('click', () => exitRoom('title'));
 
 // ===== Create Room =====
 $('#btn-create-room').addEventListener('click', async () => {

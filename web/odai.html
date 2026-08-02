@@ -22,6 +22,12 @@
 
 .admin-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:var(--card-shadow)}
 .admin-card h2{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:10px}
+.card-sub{font-size:11.5px;font-weight:700;line-height:1.6;color:var(--ink-mute);margin:-6px 0 10px}
+.import-row{display:flex;gap:8px;flex-wrap:wrap}
+.import-row input{flex:1;min-width:150px;letter-spacing:.14em;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.import-row input::placeholder{letter-spacing:normal;font-family:inherit}
+.import-row button{flex:none;width:auto;padding:0 16px;min-height:46px;font-size:14px}
 .opt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .opt-field{display:flex;align-items:center;gap:6px}
 .opt-field .opt-badge{flex:none;width:26px;height:26px;font-size:13px}
@@ -72,6 +78,21 @@
   </div>
   <div id="storage-note" class="admin-note"></div>
 
+  <!-- デッキからの差し替え -->
+  <div class="admin-card">
+    <h2>基本のお題を差し替える</h2>
+    <p class="card-sub">
+      お題リスト作成画面で作ったリストのコードを入れると、その内容で基本のお題を丸ごと置き換えます。
+      以降、コードを指定せずに作られたルームはこのリストで遊ぶことになります。
+    </p>
+    <div class="import-row">
+      <input id="import-code" type="text" class="input-field" maxlength="6" placeholder="コード（例: ABC234）"
+             autocapitalize="characters" autocomplete="off" spellcheck="false">
+      <button id="btn-import" class="btn-primary">この内容にする</button>
+    </div>
+    <p id="import-msg" class="form-msg"></p>
+  </div>
+
   <!-- 追加 / 編集フォーム -->
   <div class="admin-card">
     <h2 id="form-title">お題を追加</h2>
@@ -87,7 +108,7 @@
   <div class="tools">
     <input id="search" type="search" class="input-field" placeholder="お題・選択肢で絞り込み">
     <span id="count" class="count"></span>
-    <button id="btn-reset" class="btn-secondary" style="width:auto;padding:0 12px;min-height:38px">組み込みに戻す</button>
+    <button id="btn-reset" class="btn-secondary" style="width:auto;padding:0 12px;min-height:38px">初期リストに戻す</button>
   </div>
 
   <div id="list"></div>

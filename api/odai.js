@@ -3,7 +3,9 @@
 // x-admin-token ヘッダが一致しないと読み書きできなくなる。未設定なら誰でも触れる
 // ＝URLを知られた時点で編集されうるので、公開先で使うなら設定推奨。
 
-const { listOdai, createOdai, updateOdai, deleteOdai, resetOdai } = require('../lib/store');
+const {
+  listOdai, createOdai, updateOdai, deleteOdai, resetOdai, importDeckAsShared,
+} = require('../lib/store');
 
 const TOKEN = process.env.ODAI_ADMIN_TOKEN || '';
 
@@ -30,6 +32,7 @@ module.exports = async (req, res) => {
         case 'update': result = await updateOdai(body.id, body); break;
         case 'delete': result = await deleteOdai(body.id); break;
         case 'reset':  result = await resetOdai(); break;
+        case 'import': result = await importDeckAsShared(body.code); break;
         default: return res.status(400).json({ error: '不明な操作です' });
       }
       if (result.error) return res.status(400).json(result);

@@ -75,11 +75,12 @@ function setMode(item) {
     $('#f-q').focus();
   }
 }
-function msg(text, ok) {
-  const el = $('#form-msg');
+function msgOf(sel, text, ok) {
+  const el = $(sel);
   el.textContent = text;
   el.classList.toggle('ok', !!ok);
 }
+const msg = (text, ok) => msgOf('#form-msg', text, ok);
 
 // ===== 描画 =====
 function paintMeta() {
@@ -174,8 +175,26 @@ $('#list').addEventListener('click', async e => {
   }
 });
 
+// デッキの内容で基本のお題を丸ごと置き換える
+$('#btn-import').addEventListener('click', async () => {
+  const code = $('#import-code').value.trim().toUpperCase();
+  if (!code) return msgOf('#import-msg', 'コードを入力してください');
+  if (!confirm(`今の基本のお題（${odai.length}件）を、コード ${code} の内容に置き換えます。よろしいですか？`)) return;
+  $('#btn-import').disabled = true;
+  try {
+    const r = await call('POST', { action: 'import', code });
+    apply(r);
+    setMode(null);
+    msgOf('#import-msg', `「${r.from.name}」（${code}）の ${r.odai.length}件に差し替えました`, true);
+    $('#import-code').value = '';
+  } catch (e) {
+    msgOf('#import-msg', e.message);
+  }
+  $('#btn-import').disabled = false;
+});
+
 $('#btn-reset').addEventListener('click', async () => {
-  if (!confirm('編集内容をすべて破棄して、組み込みのお題リストに戻します。よろしいですか？')) return;
+  if (!confirm('編集内容をすべて破棄して、コードに組み込まれている初期リストに戻します。よろしいですか？')) return;
   try {
     apply(await call('POST', { action: 'reset' }));
     setMode(null);

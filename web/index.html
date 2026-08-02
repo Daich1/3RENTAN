@@ -112,8 +112,15 @@
           </div>
 
           <label class="field">
+            <span class="field-label">ルームコード（任意）</span>
+            <input id="create-code" type="text" placeholder="空欄なら自動で決まります" maxlength="8"
+                   class="input-field input-deck" autocapitalize="characters" autocomplete="off" spellcheck="false">
+            <span class="field-hint">英数字4〜8文字。合言葉として好きな文字列を指定できます。</span>
+          </label>
+
+          <label class="field">
             <span class="field-label">お題リストのコード（任意）</span>
-            <input id="create-deck" type="text" placeholder="空欄なら通常のお題" maxlength="6"
+            <input id="create-deck" type="text" placeholder="空欄なら通常のお題" maxlength="8"
                    class="input-field input-deck" autocapitalize="characters" autocomplete="off" spellcheck="false">
             <span class="field-hint">
               <a href="/deck.html">お題リストを作る / 編集する</a>
@@ -139,7 +146,7 @@
             <span class="ticket-label">PARTY RACE TICKET</span>
           </div>
           <h2>ルームに参加</h2>
-          <p class="lead">ホストから聞いた4文字を入力してね。</p>
+          <p class="lead">ホストから聞いたコードを入力してね。</p>
           <div class="divider-dark"></div>
 
           <label class="field">
@@ -148,7 +155,7 @@
           </label>
           <label class="field">
             <span class="field-label">ルームコード</span>
-            <input id="join-code" type="text" placeholder="ABCD" maxlength="4" class="input-field input-code" autocapitalize="characters" autocomplete="off" spellcheck="false">
+            <input id="join-code" type="text" placeholder="ABCD" maxlength="8" class="input-field input-code" autocapitalize="characters" autocomplete="off" spellcheck="false">
           </label>
 
           <div class="divider-dark"></div>

@@ -98,9 +98,12 @@
   <!-- 既存リストの読み込み -->
   <div class="dk-panel">
     <h2>リストの情報</h2>
-    <p class="sub">コードを持っている場合は読み込むと、その内容から編集できます（保存すると同じコードのまま更新されます）。</p>
+    <p class="sub">
+      コードは自分で決められます（英数字4〜8文字）。空欄のまま保存すると自動で決まります。
+      既にあるコードを入れて「読み込む」を押すと、その内容から編集できます。
+    </p>
     <div class="row" style="margin-bottom:8px">
-      <input id="load-code" type="text" class="input-field" maxlength="6" placeholder="コードを読み込む"
+      <input id="load-code" type="text" class="input-field" maxlength="8" placeholder="コード（例: NELO2026）"
              autocapitalize="characters" autocomplete="off" spellcheck="false">
       <button id="btn-load" class="btn-secondary">読み込む</button>
     </div>

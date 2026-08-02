@@ -29,6 +29,12 @@ let lastTickSec  = null;  // 秒読みSEを1秒1回にする
 // ===== Helpers =====
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
+// コード（ルーム・お題リスト共通）: 英数字4〜8文字。合わなければ null
+const CODE_HINT = 'コードは英数字4〜8文字にしてください';
+function normCode(input) {
+  const c = String(input || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return (c.length >= 4 && c.length <= 8) ? c : null;
+}
 function esc(str) {
   return String(str).replace(/[&<>"']/g, c => (
     { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]
@@ -168,15 +174,15 @@ $('#btn-copy-invite').addEventListener('click', copyInvite);
 // URLで渡されたコードを拾う。?room= は参加画面、?deck= はルーム作成画面へ
 function applyEntryParams() {
   const p = new URLSearchParams(location.search);
-  const room = (p.get('room') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
-  if (room.length === 4) {
+  const room = normCode(p.get('room'));
+  if (room) {
     $('#join-code').value = room;
     showScreen('join');
     $('#join-name').focus();
     return true;
   }
-  const deck = (p.get('deck') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-  if (deck.length === 6) {
+  const deck = normCode(p.get('deck'));
+  if (deck) {
     $('#create-deck').value = deck;
     showScreen('create');
     $('#create-name').focus();
@@ -377,10 +383,19 @@ $('#btn-create-room').addEventListener('click', async () => {
   $('#create-status').textContent = '作成中...';
   try {
     const laps = parseInt($('#create-laps').value) || 1;
+    const roomCodeWanted = normCode($('#create-code').value);
+    if ($('#create-code').value.trim() && !roomCodeWanted) {
+      $('#create-status').textContent = CODE_HINT;
+      $('#btn-create-room').disabled = false;
+      return;
+    }
     const answerSeconds = parseInt($('#create-answer-sec').value) || 120;
     const revealSeconds = parseInt($('#create-reveal-sec').value) || 60;
     const deckCode = $('#create-deck').value.trim().toUpperCase();
-    const data = await apiPost({ action: 'create', name, laps, answerSeconds, revealSeconds, deckCode });
+    const data = await apiPost({
+      action: 'create', name, laps, answerSeconds, revealSeconds, deckCode,
+      roomCode: roomCodeWanted,
+    });
     myPlayerId = data.playerId;
     roomCode = data.code;
     saveSession();
@@ -396,9 +411,9 @@ $('#btn-create-room').addEventListener('click', async () => {
 // ===== Join Room =====
 $('#btn-join-room').addEventListener('click', async () => {
   const name = $('#join-name').value.trim();
-  const code = $('#join-code').value.trim().toUpperCase();
+  const code = normCode($('#join-code').value);
   if (!name) { $('#join-status').textContent = '名前を入力してください'; return; }
-  if (code.length !== 4) { $('#join-status').textContent = '4文字のコードを入力'; return; }
+  if (!code) { $('#join-status').textContent = CODE_HINT; return; }
   $('#btn-join-room').disabled = true;
   $('#join-status').textContent = '参加中...';
   try {

@@ -12,6 +12,12 @@ const $ = s => document.querySelector(s);
 const esc = str => String(str).replace(/[&<>"']/g, c => (
   { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]
 ));
+// コードは英数字4〜8文字。ルーム側と同じ書式
+const CODE_HINT = 'コードは英数字4〜8文字にしてください';
+function normCode(input) {
+  const c = String(input || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return (c.length >= 4 && c.length <= 8) ? c : null;
+}
 
 let defaults = [];          // 既定リスト（初期状態は全部入り）
 let excluded = new Set();   // そこから外した id
@@ -181,10 +187,14 @@ function showCode(code) {
   use.style.display = '';
 }
 $('#btn-save').addEventListener('click', async () => {
+  // 入力欄のコードを優先する（自分で決めたコードで保存できる）
+  const typed = $('#load-code').value.trim();
+  if (typed && !normCode(typed)) return msg($('#load-msg'), CODE_HINT);
   $('#btn-save').disabled = true;
   try {
     const deck = await call('POST', '', {
-      code: deckCode || undefined,
+      // 欄が空なら新しいコードで登録する（＝入力欄の中身が保存先）
+      code: normCode(typed) || undefined,
       name: $('#deck-name').value,
       odai: collect(),
     });
@@ -214,8 +224,8 @@ $('#code-out').addEventListener('click', async () => {
 
 // ===== 読み込み =====
 $('#btn-load').addEventListener('click', async () => {
-  const code = $('#load-code').value.trim().toUpperCase();
-  if (!code) return msg($('#load-msg'), 'コードを入力してください');
+  const code = normCode($('#load-code').value);
+  if (!code) return msg($('#load-msg'), CODE_HINT);
   try {
     const deck = await call('GET', '?code=' + encodeURIComponent(code));
     $('#deck-name').value = deck.name || '';

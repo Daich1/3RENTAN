@@ -2,7 +2,7 @@
 // 管理API(api/odai.js)と違い、プレイヤーが自分のリストを作る用途なので保護はしない。
 // 既存デッキの更新はコードを知っている人だけができる＝コードが実質の合鍵。
 
-const { getDeck, createDeck, updateDeck, getSharedOdai } = require('../lib/store');
+const { getDeck, saveDeck, getSharedOdai } = require('../lib/store');
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
@@ -26,13 +26,9 @@ module.exports = async (req, res) => {
 
     if (req.method === 'POST') {
       const body = req.body || {};
-      const code = String(body.code || '').toUpperCase().trim();
-      const result = code
-        ? await updateDeck(code, body.name, body.odai)
-        : await createDeck(body.name, body.odai);
-      if (result.error) {
-        return res.status(result.error.includes('見つかりません') ? 404 : 400).json(result);
-      }
+      // コード指定があればそのコードで保存（無ければ新規、あれば上書き）
+      const result = await saveDeck(String(body.code || '').trim(), body.name, body.odai);
+      if (result.error) return res.status(400).json(result);
       return res.status(200).json(result);
     }
 

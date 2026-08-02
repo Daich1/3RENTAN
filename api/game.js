@@ -50,7 +50,8 @@ module.exports = async (req, res) => {
         const revealSeconds = clamp(body.revealSeconds, 60, 10, 300);
         const deckCode = String(body.deckCode || '').toUpperCase().trim();
         const laps = clamp(body.laps, 1, 1, 3);   // 全員が親をやる周回数
-        const result = await createRoom(name, laps, answerSeconds, revealSeconds, deckCode || null);
+        const result = await createRoom(
+          name, laps, answerSeconds, revealSeconds, deckCode || null, body.roomCode || null);
         if (result.error) return fail(res, result);
         return res.status(200).json(result);
       }

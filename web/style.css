@@ -526,9 +526,21 @@ input,button,select{font-family:inherit}
 .badge-g{background:var(--col-g);color:#fff}
 
 /* ===== Countdown Timer ===== */
+/* 音トグル。カウントダウンバーと重ならないよう両脇に余白を空けてある */
+.sound-toggle{
+  position:fixed;z-index:120;
+  top:calc(5px + env(safe-area-inset-top));right:9px;
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  border:1.5px solid rgba(255,255,255,.22);background:rgba(9,11,24,.75);
+  color:#fff;font-size:16px;line-height:1;cursor:pointer;
+  backdrop-filter:blur(6px);transition:opacity .15s,border-color .15s;
+}
+.sound-toggle.off{opacity:.5;border-color:rgba(255,255,255,.12)}
+
 .global-timer{
   position:fixed;top:0;left:0;right:0;z-index:100;display:none;
-  padding:calc(4px + env(safe-area-inset-top)) 12px 3px;
+  padding:calc(4px + env(safe-area-inset-top)) 52px 3px;
   background:rgba(9,11,24,.82);backdrop-filter:blur(6px);
   border-bottom:1px solid rgba(255,255,255,.08);
 }

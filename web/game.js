@@ -15,12 +15,14 @@ let selPicks   = [];
 let selMode    = null; // 'oya' | 'predict' | null
 let selOdai    = null;
 let lastCandidateId = null;
+let lobbyCount = 0;
 
 // Timer
 let clockOffset  = 0;      // serverNow - clientNow
 let timerDeadline = null;
 let timerTotalMs = 0;
 let timerTicker  = null;
+let lastTickSec  = null;  // 秒読みSEを1秒1回にする
 
 // ===== Helpers =====
 const $ = s => document.querySelector(s);
@@ -46,6 +48,32 @@ function clearList(el) {
   el.innerHTML = '';
   delete el.dataset.sig;
 }
+
+// ===== Sound =====
+// 画面ごとのBGM。タイトル〜参加までは無音にして、ロビーに入ってから鳴らす
+function bgmForPhase(phase) {
+  Sound.bgm(
+    phase === 'reveal' ? 'reveal'
+    : (phase === 'draw' || phase === 'answer') ? 'answer'
+    : phase === 'final' ? null
+    : 'lobby'
+  );
+}
+// ボタンの共通タップ音。専用音がある選択肢・順位カードと音トグル自身は除く
+document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.disabled || b.id === 'btn-sound') return;
+  if (b.closest('#select-choices') || b.closest('#reveal-cards')) return;
+  Sound.play(b.classList.contains('btn-link') || b.classList.contains('btn-back') ? 'back' : 'tap');
+});
+const soundBtn = $('#btn-sound');
+function paintSoundBtn() {
+  const on = Sound.isOn();
+  soundBtn.textContent = on ? '🔊' : '🔇';
+  soundBtn.classList.toggle('off', !on);
+}
+soundBtn.addEventListener('click', () => { Sound.toggle(); paintSoundBtn(); });
+paintSoundBtn();
 
 // ===== Session persistence (リロード復帰) =====
 function saveSession() {
@@ -123,6 +151,7 @@ function updateTimer(v) {
     tickTimer();
   } else {
     timerDeadline = null;
+    lastTickSec = null;
     $('#global-timer').style.display = 'none';
   }
 }
@@ -131,6 +160,11 @@ function tickTimer() {
   const remain = timerDeadline - (Date.now() + clockOffset);
   const secs = Math.max(0, Math.ceil(remain / 1000));
   const pct = Math.max(0, Math.min(100, (remain / timerTotalMs) * 100));
+  // ラスト10秒だけ秒読み。250ms 間隔で呼ばれるので秒が変わった時のみ
+  if (secs !== lastTickSec) {
+    if (secs > 0 && secs <= 10 && lastTickSec !== null) Sound.play('tick');
+    lastTickSec = secs;
+  }
   $('#global-timer-text').textContent = `残り ${secs} 秒`;
   const fill = $('#global-timer-fill');
   fill.style.width = pct + '%';
@@ -143,6 +177,7 @@ $$('.btn-back').forEach(b => b.addEventListener('click', () => {
   myPlayerId = null; roomCode = null;
   clearSession();
   updateTimer({});
+  Sound.bgm(null);
   showScreen(b.dataset.to);
 }));
 $('#btn-go-create').addEventListener('click', () => showScreen('create'));
@@ -151,6 +186,7 @@ $('#btn-back-title').addEventListener('click', () => {
   stopPolling(); myPlayerId = null; roomCode = null;
   clearSession();
   updateTimer({});
+  Sound.bgm(null);
   showScreen('title');
 });
 
@@ -221,7 +257,13 @@ $('#btn-back-lobby').addEventListener('click', () => sendAction('back_to_lobby')
 function renderView(v) {
   clockOffset = (typeof v.now === 'number') ? v.now - Date.now() : 0;
   updateTimer(v);
+  bgmForPhase(v.phase);
   if (lastPhase === 'reveal' && v.phase !== 'reveal') revealRound = null;
+  // 復帰時に途中から入った場合は鳴らさない（lastPhase が null）
+  if (lastPhase && lastPhase !== v.phase) {
+    if (lastPhase === 'lobby' && v.phase === 'draw') Sound.play('start');
+    if (v.phase === 'final') Sound.play('final');
+  }
   switch (v.phase) {
     case 'lobby':   showScreen('lobby'); renderLobby(v);  break;
     case 'draw':    renderDraw(v);                        break;
@@ -241,6 +283,9 @@ function renderLobby(v) {
   const c = $('#lobby-players');
   const sig = v.players.map(p => p.id + ':' + p.name).join('|');
   if (c.dataset.sig !== sig) {
+    // 増えた時だけ入室音（退出や初回描画では鳴らさない）
+    if (c.dataset.sig && v.players.length > lobbyCount) Sound.play('join');
+    lobbyCount = v.players.length;
     c.dataset.sig = sig;
     c.innerHTML = '';
     v.players.forEach((p, i) => {
@@ -285,7 +330,9 @@ function playDrawReveal(odai) {
   const deck = $('#draw-deck'), cand = $('#draw-candidate'), ctrl = $('#draw-controls');
   deck.style.display = ''; cand.style.display = 'none'; ctrl.style.display = 'none';
   deck.classList.remove('shuffling'); void deck.offsetWidth; deck.classList.add('shuffling');
+  Sound.play('deck');
   setTimeout(() => {
+    Sound.play('odai');
     $('#draw-question').textContent = odai.q;
     const c = $('#draw-options'); c.innerHTML = '';
     odai.opts.forEach((o, i) => {
@@ -313,6 +360,8 @@ function renderAnswer(v) {
     selPicks = []; selMode = v.isOya ? 'oya' : 'predict'; selOdai = v.odai;
     showScreen('select');
     setupSelectUI(v);
+    // 親は山札演出で鳴っているので、待たされていた側にだけお題の音を出す
+    if (!v.isOya && lastPhase) Sound.play('odai');
   }
 }
 
@@ -377,17 +426,20 @@ function buildChoices(odai) {
 
 function pickChoice(idx) {
   if (selPicks.length >= 3 || selPicks.includes(idx)) return;
+  Sound.play('pick', selPicks.length);
   selPicks.push(idx);
   refreshSelUI();
 }
 
 $('#btn-undo').addEventListener('click', () => {
+  if (selPicks.length) Sound.play('undo');
   selPicks.pop();
   refreshSelUI();
 });
 
 $('#btn-confirm').addEventListener('click', () => {
   if (selPicks.length !== 3) return;
+  Sound.play('submit');
   sendAction('submit_answer', { answer: [...selPicks] });
   showScreen('wait');
   setText($('#wait-title'), '提出済み！');
@@ -430,6 +482,7 @@ function resetRanks() {
 // ===== Reveal (発表・親が順位カードをめくる) =====
 let revealRound = null;   // 構造を組み直すべきラウンドの判定用
 let flipSent = [];        // 送信済みのめくり（往復待ちの二度押し防止）
+let revealJustBuilt = false;
 
 function renderReveal(v) {
   showScreen('reveal');
@@ -437,9 +490,11 @@ function renderReveal(v) {
     revealRound = v.round;
     flipSent = [];
     buildReveal(v);
+    revealJustBuilt = true;   // 途中参加・復帰で既に開いている分は鳴らさない
   }
   updateReveal(v);
   updateReadyUI(v);
+  revealJustBuilt = false;
 }
 
 // 1ラウンドにつき1回だけ DOM を組む。以降は状態だけ更新して
@@ -529,6 +584,11 @@ function updateReveal(v) {
         <span class="flip-label">${esc(opts[idx] || '')}</span>
         <span class="flip-hits ${hits[r] > 0 ? 'has-hit' : ''}">${hits[r] > 0 ? hits[r]+'人 的中！' : '的中なし'}</span>`;
       btn.classList.add('open');
+      if (!revealJustBuilt) {
+        Sound.play('flip', r);
+        // 面が見えるのは CSS の回転(.55s)の中盤。的中の鳴りをそこに合わせる
+        if (hits[r] > 0) setTimeout(() => Sound.play('hit'), 380);
+      }
     }
     btn.classList.toggle('can-flip', canFlip && !isOpen);
     btn.disabled = !canFlip || isOpen;
@@ -580,8 +640,14 @@ function updateReveal(v) {
   // 3枚目のめくり演出が終わってから出す（同時だと役が先に見えてしまう）
   if (v.payoutOpen && $('#reveal-scores').childElementCount === 0 && (v.roundResults||[]).length) {
     const round = v.round;
+    const silent = revealJustBuilt;   // 配当済みの画面に途中から入った時は鳴らさない
     setTimeout(() => {
-      if (revealRound === round && $('#reveal-scores').childElementCount === 0) renderPayout(v);
+      if (revealRound !== round || $('#reveal-scores').childElementCount) return;
+      renderPayout(v);
+      if (silent) return;
+      // 自分が高役を当てていたら専用のファンファーレ
+      const mine = (v.roundResults || []).find(r => r.id === v.myId);
+      Sound.play(mine && (mine.cls === 'sanrentan' || mine.cls === 'sanrenpuku') ? 'bigwin' : 'payout');
     }, 550);
   }
 }

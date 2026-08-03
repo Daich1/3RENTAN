@@ -309,8 +309,19 @@
       <div class="screen-caption">
         <span id="reveal-eyebrow" class="caption-eyebrow">REVEAL</span>
       </div>
-      <!-- 幅があれば本体の左、無ければ下に回る役の説明カード -->
+      <!-- 幅があれば本体の左にお題＋選択肢、右に役の説明カードを並べる -->
       <div class="reveal-layout">
+      <aside class="ticket card odai-ticket">
+        <div class="strip"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ticket-body">
+          <div class="ticket-head">
+            <span class="ticket-label">TOPIC &amp; CHOICES</span>
+            <span class="ticket-note">A〜G の対応表</span>
+          </div>
+          <div id="reveal-odai-side" class="odai-side"></div>
+        </div>
+      </aside>
+
       <div class="ticket card">
         <div class="strip"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="ticket-body">

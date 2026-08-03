@@ -383,8 +383,14 @@ input,button,select{font-family:inherit}
   padding:10px;border-radius:12px;background:var(--ink);color:#fff;
   font-size:15px;font-weight:800;line-height:1.35;
 }
-/* 発表画面: 幅があれば本体の左に役カードを並べ、無ければ下に落とす */
+/* 発表画面: 幅があれば本体の左にお題＋選択肢、右に役カードを並べ、無ければ縦に積む */
 .reveal-layout{display:flex;flex-direction:column;gap:14px}
+/* 狭幅では本体内の小さいお題カード（.reveal-row の左端）が対応表を兼ねる */
+.odai-ticket{display:none}
+.odai-side .odai-card-q{font-size:13px;line-height:1.45;padding-bottom:8px;margin-bottom:9px}
+.odai-side .odai-card-opt{margin-bottom:7px}
+.odai-side .odai-card-opt .opt-badge{width:20px;height:20px;font-size:11px}
+.odai-side .odai-card-opt span{font-size:12px;line-height:1.35;word-break:normal;overflow-wrap:anywhere}
 .yaku-h{margin-top:12px!important}
 .yaku-item{padding:8px 10px;margin-bottom:7px;border-radius:9px;border:1.5px solid transparent}
 .yaku-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
@@ -403,10 +409,19 @@ input,button,select{font-family:inherit}
 
 @media(min-width:760px){
   #screen-reveal .screen-inner{max-width:700px}
-  .reveal-layout{flex-direction:row;align-items:flex-start}
+  .reveal-layout{flex-direction:row;flex-wrap:wrap;align-items:flex-start}
   .reveal-layout > .ticket.card{flex:1;min-width:0}
-  /* DOM は本体が先（狭幅では役カードを下に落としたい）。左に置くのは order で */
-  .yaku-ticket{order:-1;flex:0 0 268px;position:sticky;top:44px}
+  /* 上の一括指定と同じ詳細度なので、サイドの2枚は後ろで上書きする */
+  .reveal-layout > .odai-ticket.card{display:block;flex:0 0 268px;position:sticky;top:44px}
+  /* 対応表は左のカードが持つので、本体内のミニお題カードは畳む */
+  .reveal-row > .odai-card{display:none}
+  /* 3列に足りない幅では、役カードだけ本体の下の行へ回す */
+  .reveal-layout > .yaku-ticket.card{flex:0 0 100%}
+}
+/* お題＋本体＋役の3列が収まる幅 */
+@media(min-width:1040px){
+  #screen-reveal .screen-inner{max-width:984px}
+  .reveal-layout > .yaku-ticket.card{flex:0 0 268px;position:sticky;top:44px}
 }
 
 /* お題カード ＋ 順位カード3枚を横1列に */

@@ -711,13 +711,16 @@ function buildReveal(v) {
   $('#reveal-eyebrow').textContent = `REVEAL ・ 第${v.round}R ・ 親：${v.oyaName}`;
   $('#reveal-question').textContent = odai.q || '';
 
-  // お題カード。選択肢の対応表なのでラウンド中は中身が変わらない
-  $('#reveal-odai-card').innerHTML =
+  // お題カード。選択肢の対応表なのでラウンド中は中身が変わらない。
+  // 狭幅は本体内のミニカード、広幅は左のサイドカードと、出し分けは CSS 側
+  const odaiTable =
     `<div class="odai-card-q">${esc(odai.q || '')}</div>` +
     (odai.opts || []).map((t, i) =>
       `<div class="odai-card-opt" data-idx="${i}">` +
       `<span class="opt-badge ${BADGES[i]}">${LETTERS[i]}</span><span>${esc(t)}</span></div>`
     ).join('');
+  $('#reveal-odai-card').innerHTML = odaiTable;
+  $('#reveal-odai-side').innerHTML = odaiTable;
 
   const cards = $('#reveal-cards');
   cards.innerHTML = '';
@@ -840,7 +843,7 @@ function updateReveal(v) {
 
   // --- お題カード: 開いた枠の選択肢を強調 ---
   const openIdx = answer.filter((x, r) => flipped[r] && x != null);
-  $$('#reveal-odai-card .odai-card-opt').forEach(el => {
+  $$('#reveal-odai-card .odai-card-opt, #reveal-odai-side .odai-card-opt').forEach(el => {
     el.classList.toggle('hit', openIdx.includes(parseInt(el.dataset.idx)));
   });
 

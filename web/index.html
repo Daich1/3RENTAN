@@ -300,6 +300,28 @@
         <div class="wait-dots"><i></i><i></i><i></i></div>
         <div id="wait-progress" class="wait-progress"></div>
       </div>
+
+      <!-- 提出後の待ち時間に、お題と自分の予想を見返すための控え -->
+      <div id="wait-recap" class="ticket card wait-recap" style="display:none">
+        <div class="strip"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ticket-body">
+          <div class="ticket-head">
+            <span id="wait-recap-role" class="role-chip">予想者</span>
+            <span id="wait-recap-label" class="ticket-label">YOUR PREDICTION</span>
+          </div>
+          <div id="wait-recap-q" class="mini-question"></div>
+          <div class="divider-dark"></div>
+
+          <div id="wait-recap-ranks" class="rank-display">
+            <div class="rank-slot filled"><span class="rank-num">1位</span><span class="rank-val"></span></div>
+            <div class="rank-slot filled"><span class="rank-num">2位</span><span class="rank-val"></span></div>
+            <div class="rank-slot filled"><span class="rank-num">3位</span><span class="rank-val"></span></div>
+          </div>
+
+          <p class="pick-hint">選択肢</p>
+          <div id="wait-recap-choices" class="choice-list"></div>
+        </div>
+      </div>
     </div>
   </div>
 

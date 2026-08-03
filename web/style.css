@@ -367,6 +367,21 @@ input,button,select{font-family:inherit}
 .status-dot.done{background:var(--col-f)}
 .status-dot.pending{background:#4a5075}
 
+/* 提出後の待ち時間に見返す控え券。押せないので choice-btn は静的表示 */
+.wait-recap{margin-top:14px}
+.wait-recap .mini-question{margin-top:10px;font-size:19px}
+.wait-recap .rank-slot{min-height:72px}
+.wait-recap .pick-hint{margin:14px 0 8px}
+.wait-recap .choice-list{gap:6px}
+.wait-recap .choice-btn{min-height:44px;font-size:15px;cursor:default}
+/* 選ばなかった選択肢。読めるが目立たない程度に落とす（used の .28 だと薄すぎる） */
+.wait-recap .choice-btn.miss{opacity:.45}
+.wait-recap .cb-text{flex:1;min-width:0}
+.wait-recap .pick-rank{
+  flex:none;padding:3px 9px;border-radius:999px;
+  background:var(--ink);color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;
+}
+
 /* 次へ進む準備の進捗。行で積むと縦に伸びるのでチップを折り返す */
 .ready-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .ready-chips:empty{display:none}

@@ -228,6 +228,7 @@ async function tryRestore() {
   setText($('#wait-title'), '再接続中…');
   setText($('#wait-message'), '前回のルームに戻ろうとしています');
   clearList($('#wait-progress'));
+  hideWaitRecap();
   setOffline(true);
   startPolling();
   return true;
@@ -530,6 +531,7 @@ function renderDraw(v) {
     setText($('#wait-title'), `${v.oyaName} がお題を選択中`);
     setText($('#wait-message'), '親が山札からお題を引いています…');
     clearList($('#wait-progress'));
+    hideWaitRecap();
     lastCandidateId = null;
   }
 }
@@ -561,8 +563,11 @@ function renderAnswer(v) {
     setText($('#wait-title'), '提出済み！');
     setText($('#wait-message'), '全員の回答を待っています');
     renderSubmitProgress(v);
+    // 自分の予想はサーバーから返るので、リロードや再接続のあとでも見返せる
+    renderWaitRecap(v.odai, v.myAnswer, v.isOya);
     return;
   }
+  hideWaitRecap();
   if (lastPhase !== 'answer' || selMode === null) {
     selPicks = []; selMode = v.isOya ? 'oya' : 'predict'; selOdai = v.odai;
     showScreen('select');
@@ -571,6 +576,29 @@ function renderAnswer(v) {
     if (!v.isOya && lastPhase) Sound.play('odai');
   }
 }
+
+// 提出後の待ち時間に、お題と自分の予想を見返せるようにする控え券
+function renderWaitRecap(odai, picks, isOya) {
+  const box = $('#wait-recap');
+  if (!odai || !Array.isArray(picks) || picks.length !== 3) return hideWaitRecap();
+  box.style.display = '';
+  setText($('#wait-recap-role'), isOya ? '親' : '予想者');
+  setText($('#wait-recap-label'), isOya ? 'YOUR TOP 3' : 'YOUR PREDICTION');
+  setText($('#wait-recap-q'), odai.q);
+  $$('#wait-recap-ranks .rank-slot').forEach((slot, r) => {
+    const idx = picks[r];
+    setText(slot.querySelector('.rank-val'), `${LETTERS[idx]} ${odai.opts[idx]}`);
+  });
+  $('#wait-recap-choices').innerHTML = odai.opts.map((t, i) => {
+    const r = picks.indexOf(i);
+    return `<div class="choice-btn static${r < 0 ? ' miss' : ''}">` +
+      `<span class="opt-badge ${BADGES[i]}">${LETTERS[i]}</span>` +
+      `<span class="cb-text">${esc(t)}</span>` +
+      (r < 0 ? '' : `<span class="pick-rank">${r + 1}位</span>`) +
+      `</div>`;
+  }).join('');
+}
+function hideWaitRecap() { $('#wait-recap').style.display = 'none'; }
 
 // 名前の行は組み直さず、丸と OK/… だけ差し替える（点滅・選択解除の防止）
 function renderSubmitProgress(v) {
@@ -652,6 +680,8 @@ $('#btn-confirm').addEventListener('click', () => {
   setText($('#wait-title'), '提出済み！');
   setText($('#wait-message'), '全員の回答を待っています…');
   clearList($('#wait-progress'));
+  // 次のポーリングを待たずに控えを出す（以降はサーバーの myAnswer で描き直る）
+  renderWaitRecap(selOdai, [...selPicks], selMode === 'oya');
   selMode = null;
 });
 

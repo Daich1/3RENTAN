@@ -967,9 +967,14 @@ function renderFinal(v) {
   const sorted = withRanks(v.finalRanking || [...v.players].sort((a,b)=>b.score-a.score));
   const c = $('#final-ranking');
   // 順位が動かない画面。毎ポーリングで組み直すと名前が点滅してコピーできない
-  const sig = sorted.map(p => p.id + ':' + p.name + ':' + p.score).join('|');
+  // サンレンタン欄も込みで比較する。同じ顔ぶれ・同じ点で終わった次の試合に
+  // 前回の一覧が残らないようにするため
+  const srt = v.sanrentans || [];
+  const sig = sorted.map(p => p.id + ':' + p.name + ':' + p.score).join('|') +
+    '#' + srt.map(s => s.round + ':' + s.name).join(',');
   if (c.dataset.sig === sig) return;
   c.dataset.sig = sig;
+  renderSanrentanLog(srt);
   c.innerHTML = '';
   sorted.forEach((p,i) => {
     const row = document.createElement('div');
@@ -983,6 +988,27 @@ function renderFinal(v) {
   });
   $('#btn-play-again').style.display = v.isHost ? '' : 'none';
   $('#btn-back-lobby').style.display = v.isHost ? '' : 'none';
+}
+
+// その試合で出たサンレンタン（最高役）だけを一覧にする
+function renderSanrentanLog(list) {
+  setText($('#final-srt-count'), list.length ? `${list.length}回` : '');
+  const c = $('#final-srt');
+  if (!list.length) {
+    c.innerHTML = `<p class="srt-empty">この試合ではサンレンタンは出ませんでした。</p>`;
+    return;
+  }
+  c.innerHTML = list.map((s, i) => `
+    <div class="srt-row" style="animation-delay:${i * 0.1}s">
+      <div class="srt-head">
+        <span class="srt-round">第${s.round}R</span>
+        <span class="srt-name${nameCls(s.name)}">${esc(s.name)}</span>
+        <span class="srt-pts">+6pt</span>
+      </div>
+      <div class="srt-q">${esc(s.q)}${s.oyaName ? `<small>親：${esc(s.oyaName)}</small>` : ''}</div>
+      <div class="srt-picks">${(s.picks || []).map((t, r) =>
+        `<span class="srt-pick"><b>${r + 1}位</b>${esc(t)}</span>`).join('')}</div>
+    </div>`).join('');
 }
 
 // ===== Boot: 直近セッションがあれば復帰。無ければURLのコードを拾う =====

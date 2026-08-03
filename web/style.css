@@ -612,6 +612,33 @@ input,button,select{font-family:inherit}
 .f-score{position:relative;font-size:20px;font-weight:800;white-space:nowrap}
 .f-score small{font-size:12px;font-weight:800}
 
+/* この試合で出たサンレンタンの振り返り。最高役なので配当表と同じ金色で揃える */
+.srt-list{display:grid;gap:8px}
+.srt-row{
+  padding:9px 11px;border-radius:12px;color:var(--ink);
+  background:linear-gradient(135deg,#fff6d6,#f5c518 60%,#e0a800);border:1.5px solid #b08600;
+  animation:sr-pop .45s both;
+}
+.srt-head{display:flex;align-items:center;gap:8px}
+.srt-round{
+  flex:none;padding:2px 7px;border-radius:999px;background:#7a5b00;color:#fff;
+  font-size:10px;font-weight:800;letter-spacing:.04em;
+}
+.srt-name{flex:1;min-width:0;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srt-name.long{font-size:13.5px}
+.srt-name.vlong{font-size:12px}
+.srt-pts{flex:none;font-size:14px;font-weight:800}
+.srt-q{margin-top:5px;font-size:12px;font-weight:800;line-height:1.4}
+.srt-q small{margin-left:6px;font-size:11px;font-weight:700;color:#7a5b00}
+.srt-picks{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.srt-pick{
+  display:inline-flex;align-items:center;gap:4px;padding:3px 7px;
+  border-radius:8px;background:rgba(255,255,255,.72);
+  font-size:11px;font-weight:700;line-height:1.3;
+}
+.srt-pick b{font-size:10px;font-weight:800;color:#7a5b00}
+.srt-empty{font-size:12px;font-weight:700;color:var(--ink-mute);line-height:1.5}
+
 /* ===== Error ===== */
 .empty-mark{font-size:44px;font-weight:800;letter-spacing:.1em;color:var(--line-soft)}
 .empty-sub{font-size:11px;font-weight:700;letter-spacing:.3em;color:var(--ink-mute);margin-top:6px}

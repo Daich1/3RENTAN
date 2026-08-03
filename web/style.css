@@ -383,7 +383,7 @@ input,button,select{font-family:inherit}
   padding:10px;border-radius:12px;background:var(--ink);color:#fff;
   font-size:15px;font-weight:800;line-height:1.35;
 }
-/* 発表画面: 幅があれば本体の右に役カードを並べ、無ければ下に落とす */
+/* 発表画面: 幅があれば本体の左に役カードを並べ、無ければ下に落とす */
 .reveal-layout{display:flex;flex-direction:column;gap:14px}
 .yaku-h{margin-top:12px!important}
 .yaku-item{padding:8px 10px;margin-bottom:7px;border-radius:9px;border:1.5px solid transparent}
@@ -405,7 +405,8 @@ input,button,select{font-family:inherit}
   #screen-reveal .screen-inner{max-width:700px}
   .reveal-layout{flex-direction:row;align-items:flex-start}
   .reveal-layout > .ticket.card{flex:1;min-width:0}
-  .yaku-ticket{flex:0 0 268px;position:sticky;top:44px}
+  /* DOM は本体が先（狭幅では役カードを下に落としたい）。左に置くのは order で */
+  .yaku-ticket{order:-1;flex:0 0 268px;position:sticky;top:44px}
 }
 
 /* お題カード ＋ 順位カード3枚を横1列に */

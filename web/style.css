@@ -228,12 +228,19 @@ input,button,select{font-family:inherit}
 .section-note{font-size:12px;color:var(--ink-mute)}
 
 .lobby-players{display:grid;gap:8px}
+/* 大人数だと縦一列では画面から溢れるので2列に畳む */
+.lobby-players.dense{grid-template-columns:1fr 1fr;gap:6px}
 .lobby-player{
   display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 12px;
   border:1.5px solid var(--line-hair);border-radius:12px;background:#fff;
   font-size:16px;font-weight:800;color:var(--ink);
   animation:sr-pop .3s both;
 }
+.lobby-players.dense .lobby-player{min-height:42px;padding:6px 10px;gap:7px;font-size:14px}
+.lobby-players.dense .p-dot{width:11px;height:11px}
+.lobby-players.dense .p-host{font-size:9px;padding:3px 5px;letter-spacing:.06em}
+/* 名前が長いと HOST バッジを押し出すので省略する */
+.lobby-player>span:not(.p-dot):not(.p-host){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lobby-player .p-dot{
   width:14px;height:14px;border-radius:999px;flex-shrink:0;
   box-shadow:0 0 0 2px #fff,0 0 0 3.5px rgba(0,0,0,.1);

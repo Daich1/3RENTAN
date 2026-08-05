@@ -495,6 +495,7 @@ function renderLobby(v) {
     if (c.dataset.sig && v.players.length > lobbyCount) Sound.play('join');
     lobbyCount = v.players.length;
     c.dataset.sig = sig;
+    c.classList.toggle('dense', v.players.length > 8);
     c.innerHTML = '';
     v.players.forEach((p, i) => {
       const d = document.createElement('div');
